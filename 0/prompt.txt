@@ -1,0 +1,103 @@
+Prepare the existing MarginGhost Next.js V0.4 project for a safe, free, public hackathon demonstration deployed through GitHub to Vercel.
+
+Preserve the existing application design and all working local functionality.
+
+Requirements:
+1. Add an explicit DEMO_MODE configuration, with public production deployments defaulting to synthetic-only mode.
+2. Present the three existing synthetic scenarios with accurate evidence and outcome states.
+3. Clearly label synthetic replay results as demonstrations, not live AI investigations.
+4. Completely disable public live Groq inference and PDF ingestion in demo mode, enforced on the server as well as in the UI. Return an appropriate error for direct requests to disabled endpoints.
+5. Do not require or expose LLM_API_KEY, NEATLOGS_API_KEY, or any other secret in public demo mode.
+6. Preserve localhost Groq investigation functionality when explicitly configured for local development.
+7. Keep the deterministic financial audit and evidence verification unchanged.
+8. Add regression tests ensuring that demo-mode API restrictions cannot be bypassed by direct HTTP requests.
+9. Verify the three synthetic scenarios, including the amendment conflict requiring manual review.
+10. Maintain Next.js compatibility with Vercel's normal deployment process.
+11. Update README.md with exact GitHub-to-Vercel deployment steps and demo limitations.
+12. Do not modify .env, access credentials, Git settings, or Entire hooks.
+13. Do not commit, push or deploy.
+14. Run available typecheck and lint checks. Report any tests or builds blocked in WSL.
+
+The result should be a polished, production-safe, non-commercial hackathon demonstration with no paid API usage.
+
+---
+
+Redesign the existing MarginGhost V0.4 Next.js UI into a polished, premium B2B fintech SaaS experience.
+
+First inspect:
+- src/app/home-client.tsx
+- src/app/page.tsx
+- src/app/globals.css
+- Existing demo-mode logic
+- Existing tests and API contracts
+
+Goal:
+Make MarginGhost look like a professionally designed financial investigation product, not a generic AI-generated dashboard.
+
+Visual direction:
+- Warm ivory/off-white backgrounds, deep forest green, charcoal typography, subtle neutral borders.
+- Refined editorial typography and strong information hierarchy.
+- No purple gradients, glassmorphism, excessive shadows, emoji decorations, or generic AI illustrations.
+- Use consistent spacing, restrained color, thoughtful interaction states, and excellent responsive layouts.
+- Maintain a distinctive, trustworthy financial-software identity.
+
+Redesign requirements:
+
+1. HEADER
+Create a compact, premium product header with the MarginGhost identity, navigation anchors and a small demo-mode indicator where appropriate.
+
+2. HERO
+Reduce excessive vertical whitespace.
+Keep the core value proposition about identifying invoice discrepancies.
+Introduce a concise explanatory subtitle and a clear primary action that scrolls to the investigation workspace.
+
+3. INVESTIGATION WORKSPACE
+Redesign document upload sections into a cleaner, more structured layout.
+Make contract, purchase order, invoices and amendments easily distinguishable.
+Show file readiness, printed document IDs and validation states clearly.
+Preserve current PDF upload, replace and remove behavior for local mode.
+
+4. SYNTHETIC DEMO
+Create a visually compelling scenario selector for:
+- ₹18,000 potential overcharge.
+- Amendment conflict requiring review.
+- Completed ₹0 overcharge after a revised PO.
+
+In production demo mode, emphasize immediate scenario exploration rather than disabled PDF uploads.
+Clearly state that these are synthetic replay results, not live model inference.
+
+5. RESULTS EXPERIENCE
+Build a premium investigation summary:
+- Large potential recovery amount when established.
+- Invoices reviewed.
+- Findings count.
+- Clear completed vs needs_review states.
+- Strong side-by-side contract → PO → invoice price comparison.
+
+Never make a needs_review case appear like a verified ₹0 overcharge result.
+
+6. EVIDENCE EXPLORER
+Replace the long, repetitive evidence list with grouped, collapsible source-document sections.
+Include document IDs, page references, exact excerpts and search/filter functionality.
+Do not invent citations or change source evidence.
+
+7. MICRO-INTERACTIONS
+Add subtle hover feedback, meaningful loading states, keyboard accessibility, focus rings and polished empty states.
+Avoid distracting animations.
+
+8. RESPONSIVENESS
+Ensure the interface works properly on desktop, tablet and mobile.
+Avoid horizontal overflow and cramped results panels.
+
+9. ENGINEERING SAFETY
+Do not modify financial audit calculations, document-matching rules, Groq integration, Zod schemas, deterministic verification, neatlogs tracing or API security guards.
+Preserve local live investigation and production synthetic demo behavior.
+Do not change .env, credentials, Git configuration, Entire hooks or dependencies unless strictly necessary.
+Do not commit, push or deploy.
+
+10. VERIFICATION
+Run available TypeScript and lint checks.
+Maintain all current tests.
+Report exactly which files changed and explain any checks blocked by WSL.
+
+Prioritize design quality and usability over adding new features. The finished interface should feel production-quality and human-designed.
