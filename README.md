@@ -1,6 +1,6 @@
 # MarginGhost V0.1 — neatHack starter
 
-This starter is an **evidence-first deterministic baseline**, not yet an autonomous LLM agent. It accepts structured JSON contract/PO/invoice records, calculates potential supplier overcharges with auditable rules, and emits optional Neatlogs workflow/tool spans. No PDF extraction or supplier email sending is included in V0.1.
+This starter is an **evidence-first deterministic baseline**, not yet an autonomous LLM agent. It accepts structured JSON contract/PO/invoice records, calculates potential supplier overcharges with auditable rules, and emits optional Neatlogs workflow/tool spans. PDF text extraction is available separately for manual review; it does not populate or invoke the JSON audit flow.
 
 ## Windows PowerShell setup
 
@@ -27,6 +27,10 @@ npm exec --offline --no -- neatlogs doctor --probe --json
 
 The `--probe` step requires a valid `NEATLOGS_API_KEY` set in your shell environment. `init()` runs once per server process, and the route flushes before returning. Data capture is off on custom spans for privacy. To collect model spans in the next phase, wrap the actual AI provider client as documented at https://docs.neatlogs.com/sdk/typescript.
 
+## PDF text extraction
+
+Send a multipart `POST` to `/api/ingest/pdf` with a `file` field containing a PDF (up to 10 MB and 250 pages). The endpoint returns extracted text with 1-based source page numbers. Scanned/image-only PDFs have no OCR support. PDF contents are not sent to Neatlogs; extracted text is untrusted and must be reviewed and mapped into the existing JSON schema before auditing.
+
 ## Entire setup (do this before coding with an agent)
 
 From PowerShell, review the official installer at https://github.com/entireio/cli and install:
@@ -44,7 +48,7 @@ If your coding agent is not connected, run `entire agent add --help` and install
 
 ## Next milestones
 
-1. Add PDF text extraction with verified source-page references; never let the LLM invent citation offsets.
+1. Add reviewed PDF-to-record mapping with verified source-page references; never let the LLM invent citation offsets.
 2. Add a real LLM decision loop for matching ambiguous descriptions and investigating amendments, with bounded retries and typed tools.
 3. Add an amendment-aware contract resolver and a new regression test.
 4. Add case draft/approval and persistent state.
