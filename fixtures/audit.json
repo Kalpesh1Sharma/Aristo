@@ -1,0 +1,5 @@
+{
+  "contract": {"type":"contract","id":"C-001","supplierId":"STEELCO","currency":"INR","validFrom":"2026-10-01","validTo":"2026-10-31","prices":[{"sku":"STEEL-PLATE-A","unitPrice":480}],"evidence":"Clause 4.1: Steel plate A, INR 480 per unit, excluding tax and freight"},
+  "purchaseOrder": {"type":"purchase_order","id":"PO-017","supplierId":"STEELCO","contractId":"C-001","currency":"INR","orderedAt":"2026-10-05","items":[{"sku":"STEEL-PLATE-A","quantity":400,"unitPrice":480}]},
+  "invoices": [{"type":"invoice","id":"INV-104","supplierId":"STEELCO","purchaseOrderId":"PO-017","currency":"INR","issuedAt":"2026-10-08","items":[{"sku":"STEEL-PLATE-A","quantity":400,"unitPrice":525}]}]
+}

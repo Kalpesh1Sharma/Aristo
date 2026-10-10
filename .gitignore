@@ -1,14 +1,11 @@
-.env
-
-# Secrets
+node_modules
+.next
+.env*
+!.env.example
+*.tsbuildinfo
+.venv/
 .env
 .env.*
 !.env.example
-
-# Python
-.venv/
-__pycache__/
-*.py[cod]
-
-# Local tooling
-.vscode/
+node_modules/
+.next/
