@@ -1,6 +1,6 @@
-# MarginGhost V0.1 — neatHack starter
+# MarginGhost V0.3 — evidence-backed supplier invoice investigation
 
-This starter is an **evidence-first deterministic baseline**, not yet an autonomous LLM agent. It accepts structured JSON contract/PO/invoice records, calculates potential supplier overcharges with auditable rules, and emits optional Neatlogs workflow/tool spans. PDF text extraction is available separately for manual review; it does not populate or invoke the JSON audit flow.
+MarginGhost accepts extracted PDF page text, asks a server-side OpenAI-compatible provider to extract cited facts, validates every quote against its exact source page, resolves applicable price amendments, and uses the deterministic TypeScript audit engine to calculate a potential recovery case. No supplier communication or payment is performed. The existing JSON audit and PDF ingestion routes remain available.
 
 ## Windows PowerShell setup
 
@@ -10,7 +10,7 @@ cd D:\
 cd D:\marginghost
 npm install
 Copy-Item .env.example .env.local
-# Put NEATLOGS_API_KEY in .env.local from your dashboard
+# Configure LLM_API_KEY (and optionally NEATLOGS_API_KEY) in .env.local
 npm run test
 npm run typecheck
 npm run dev
@@ -27,9 +27,9 @@ npm exec --offline --no -- neatlogs doctor --probe --json
 
 The `--probe` step requires a valid `NEATLOGS_API_KEY` set in your shell environment. `init()` runs once per server process, and the route flushes before returning. Data capture is off on custom spans for privacy. To collect model spans in the next phase, wrap the actual AI provider client as documented at https://docs.neatlogs.com/sdk/typescript.
 
-## PDF text extraction
+## PDF investigation
 
-Send a multipart `POST` to `/api/ingest/pdf` with a `file` field containing a PDF (up to 10 MB and 250 pages). The endpoint returns extracted text with 1-based source page numbers. Scanned/image-only PDFs have no OCR support. PDF contents are not sent to Neatlogs; extracted text is untrusted and must be reviewed and mapped into the existing JSON schema before auditing.
+Send a multipart `POST` to `/api/ingest/pdf` with a `file` field containing a PDF (up to 10 MB and 250 pages). Assign the returned pages a document `id` and `type` (`contract`, `purchase_order`, `invoice`, or `amendment`) and submit `{ "documents": [...] }` to `/api/investigate`. The API returns a bounded state history and either a deterministic audit case or `needs_review`. Scanned PDFs have no OCR support. The model provider receives page text; Neatlogs custom spans capture neither inputs nor outputs. The extraction provider can be changed with `LLM_API_URL` and `LLM_MODEL`.
 
 ## Entire setup (do this before coding with an agent)
 

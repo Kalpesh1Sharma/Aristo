@@ -10,4 +10,9 @@ export async function ensureTracing() {
 export const tracedParse = span({ kind: "TOOL", name: "validate_supplier_documents", captureInput: false, captureOutput: false }, async <T>(fn: () => T) => fn());
 export const tracedAudit = span({ kind: "CHAIN", name: "compare_contract_and_invoice", captureInput: false, captureOutput: false }, async <T>(fn: () => T) => fn());
 export const tracedWorkflow = span({ kind: "WORKFLOW", name: "supplier_invoice_audit", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
+export const tracedExtraction = span({ kind: "TOOL", name: "document_extraction", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
+export const tracedMatching = span({ kind: "CHAIN", name: "document_matching", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
+export const tracedInvestigation = span({ kind: "CHAIN", name: "amendment_investigation", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
+export const tracedVerification = span({ kind: "CHAIN", name: "evidence_verification", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
+export const tracedRetry = span({ kind: "TOOL", name: "bounded_extraction_retry", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
 export async function flushTracing(enabled: boolean) { if (enabled) await flush(); }
