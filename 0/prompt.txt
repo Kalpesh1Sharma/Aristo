@@ -1,0 +1,25 @@
+Restructure the existing MarginGhost Next.js V0.4 application into a real product website with separate homepage, investigation workspace, and synthetic demo routes.
+
+Desired routes:
+
+- `/` — polished public product homepage with a clear value proposition, how-it-works explanation, and calls to action.
+- `/investigate` — preserve the existing working PDF upload and investigation workspace.
+- `/demo` — preserve the three synthetic example scenarios and evidence explorer.
+
+Requirements:
+
+1. Reuse the existing premium cream/forest-green design system and UI components.
+2. Make navigation consistent across all routes.
+3. Move the synthetic scenario explorer to `/demo`; do not make it the entire homepage.
+4. Keep the actual PDF workflow on `/investigate`, including document uploads, printed IDs, progress, findings, and evidence.
+5. In production, show the investigation workspace but keep live API operations disabled until authorized access and enforceable quotas are implemented.
+6. Explain clearly in the production UI that live AI investigation requires authorized access. Do not present disabled functionality as working.
+7. Preserve all local Groq extraction, document verification, amendment resolution, financial audit, and neatlogs tracing behavior.
+8. Do not remove existing production API guards to make live requests work.
+9. Add route navigation and regression tests, including protection against direct unauthorized API requests.
+10. Do not upload data to third parties in synthetic demo mode.
+11. Do not modify .env, credentials, Entire hooks, Git settings, or existing financial calculations.
+12. Do not commit, push, or deploy.
+13. Run typecheck and lint, and report anything blocked by WSL.
+
+Favor clean architecture and minimal refactoring rather than duplicating the large existing page component.
