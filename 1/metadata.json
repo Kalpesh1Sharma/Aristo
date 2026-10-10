@@ -1,0 +1,66 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4JWWR3PTTE5N5NM61SKPMXD",
+  "session_id": "01a125c3-accb-7bd3-8797-796be92fe7dc",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T12:34:12.823833151Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "README.md",
+    "package-lock.json",
+    "package.json"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-luna",
+  "turn_id": "f9c9f6424e8a",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 26089,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 491264,
+    "output_tokens": 3434,
+    "api_call_count": 25,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T12:34:12.693820123Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 17,
+    "human_modified": 3,
+    "human_removed": 0,
+    "total_committed": 17,
+    "total_lines_changed": 20,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 425,
+      "user_lines_removed": 10,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        "README.md": 6,
+        "package-lock.json": 263,
+        "package.json": 1,
+        "src/app/api/ingest/pdf/route.ts": 27,
+        "src/lib/pdf-ingestion.ts": 41,
+        "test-invoice.pdf": 68,
+        "tests/pdf-ingestion.test.ts": 12
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        "README.md": 2,
+        "package.json": 1
+      }
+    }
+  ]
+}

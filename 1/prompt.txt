@@ -1,0 +1,28 @@
+Debug and repair MarginGhost's PDF ingestion pipeline.
+
+CURRENT PROBLEM:
+- POST /api/ingest/pdf returns HTTP 422 with {"error":"PDF could not be read"}.
+- The failure occurs with both a normal resume PDF and a freshly generated ReportLab text-based PDF.
+- Next.js 16.4.0 uses Turbopack.
+- The project uses pdfjs-dist.
+- The synthetic PDF is available at test-invoice.pdf in the project root.
+
+TASK:
+1. Inspect src/lib/pdf-ingestion.ts, src/app/api/ingest/pdf/route.ts, package.json and the installed pdfjs-dist API.
+2. Reproduce the failure with test-invoice.pdf.
+3. Find the underlying exception before modifying the implementation. Report its error name, message and root cause, without exposing document contents.
+4. Fix PDF parsing for the Next.js Node.js runtime. Investigate PDF.js worker configuration and server-side bundling if relevant, but do not assume either is the cause.
+5. Ensure the extracted result includes correct page numbers and text.
+6. Add a regression test using a small, synthetic, text-based PDF.
+7. Preserve existing JSON audit functionality and input validation.
+8. Keep limits on PDF size, page count and extracted text length.
+9. Avoid returning internal stack traces or logging raw document contents.
+10. Run npm run typecheck, npm test, npm run lint and npm run build.
+
+IMPORTANT:
+- Make the smallest reliable fix.
+- Do not modify .env or credentials.
+- Do not commit or push.
+- If WSL cannot execute a dependency installed on Windows, distinguish that environment problem from the actual PDF bug.
+
+Finally, report the root cause, files changed, tests passed and any remaining limitations.
