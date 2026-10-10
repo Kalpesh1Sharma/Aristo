@@ -1,0 +1,1 @@
+Run `pwd` and `git status --short`. Do not modify any files. Confirm that both commands execute successfully.
