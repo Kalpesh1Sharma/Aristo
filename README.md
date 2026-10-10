@@ -1,65 +1,48 @@
-# MarginGhost V0.3 — evidence-backed supplier invoice investigation
+# MarginGhost V0.4
 
-MarginGhost accepts extracted PDF page text, optionally asks Groq to extract cited facts, validates every quote against its exact source page, resolves applicable price amendments, and uses the deterministic TypeScript audit engine to calculate a potential recovery case. Offline mode is the default and does not contact the network. No supplier communication or payment is performed. The existing JSON audit and PDF ingestion routes remain available.
+MarginGhost investigates supplier invoices against a contract, purchase order, and optional amendments. It extracts PDF page text, asks the configured server-side provider to identify cited facts, verifies every excerpt against the uploaded page text, then runs the deterministic INR audit. It does not send supplier claims or change payments.
 
-## Windows PowerShell setup
+## Local workflow (Windows PowerShell)
 
 ```powershell
-cd D:\
-# Extract marginghost-starter.zip to D:\marginghost
 cd D:\marginghost
 npm install
 Copy-Item .env.example .env.local
-# Leave LLM_MODE=offline for offline operation. For local development only, set LLM_MODE=groq_free and configure LLM_API_KEY.
-npm run test
-npm run typecheck
+# Keep LLM_MODE=offline for no-network mode. For live extraction in local development only,
+# set LLM_MODE=groq_free and LLM_API_KEY in .env.local. Never use a NEXT_PUBLIC key.
 npm run dev
 ```
 
-Open http://localhost:3000 and load `fixtures/audit.json`. Expected total: INR 18,000.
+Open http://localhost:3000. Add one contract, one purchase order, at least one invoice, and any relevant amendments. MarginGhost supports up to 25 documents total and PDFs up to 10 MB each. Enter the printed document ID shown inside each PDF; uploaded filenames are not used as document identities or financial facts. Choose **Investigate documents** to submit each file to `POST /api/ingest/pdf` in a multipart `file` field, then submit the returned page numbers and extracted text to `POST /api/investigate`.
 
-## Verify observability
+Live Groq calls are restricted by the server to local development requests. In offline mode the API returns `needs_review` because no extractor is configured. Production deployments cannot make live investigations and the UI reports the server's restriction clearly. Scanned PDFs have no OCR support and may need text recognition before upload. Requests do not retry automatically. Choose Retry only after correcting the cause or when you want to submit again.
+
+The **Local synthetic demonstration** buttons load the PDF fixtures in `fixtures/live-demo`. They do not display fixture audit results or claim a model ran. Submit the loaded files to make a real API request; a working local extractor configuration is required for a completed case. Three scenarios cover a potential overcharge, an amendment/PO disagreement, and a revised PO with no potential overcharge.
+
+The result distinguishes `completed` from `needs_review`. A completed case with zero findings is reported as no potential overcharge found. A review case is never presented as an approved zero result. Evidence excerpts shown in the browser are returned by the API and come from exact uploaded page text.
+
+## Checks (run from Windows PowerShell)
+
+```powershell
+npm run test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+## Privacy and limits
+
+PDFs and extracted page text are held in the active browser session and are not written to local storage. They are sent to this application's API when investigating. Provider credentials stay server-side. Custom Neatlogs spans do not capture request or response content. The app has no authentication or persistent case storage. Keep synthetic/demo data separate from real supplier data when sharing screenshots.
+
+One supplier, single currency (INR), and one purchase order per case are supported. Tax/freight allocation, OCR, historical invoice deduplication across separate cases, authentication, case persistence, and supplier communications are outside this milestone. Potential amounts are review leads, not approved claims.
+
+## Existing observability setup
+
+Neatlogs and Entire integrations are retained as configured. Existing Neatlogs diagnostics remain available:
 
 ```powershell
 npm exec --offline --no -- neatlogs doctor --local --json
 npm exec --offline --no -- neatlogs doctor --probe --json
 ```
 
-The `--probe` step requires a valid `NEATLOGS_API_KEY` set in your shell environment. `init()` runs once per server process, and the route flushes before returning. Data capture is off on custom spans for privacy. To collect model spans in the next phase, wrap the actual AI provider client as documented at https://docs.neatlogs.com/sdk/typescript.
-
-## PDF investigation
-
-Send a multipart `POST` to `/api/ingest/pdf` with a `file` field containing a PDF (up to 10 MB and 250 pages). Assign the returned pages a document `id` and `type` (`contract`, `purchase_order`, `invoice`, or `amendment`) and submit `{ "documents": [...] }` to `/api/investigate`. The API returns a bounded state history and either a deterministic audit case or `needs_review`. Scanned PDFs have no OCR support. Live extraction is restricted to authorized local development requests, the fixed Groq endpoint and `openai/gpt-oss-20b`, bounded input/output, and a 20-second timeout. Provider failures require manual review. Neatlogs spans capture neither inputs nor outputs.
-
-## Entire setup (do this before coding with an agent)
-
-From PowerShell, review the official installer at https://github.com/entireio/cli and install:
-
-```powershell
-irm https://entire.io/install.ps1 | iex
-entire --version
-git init
-entire enable
-entire status
-entire agent list
-```
-
-If your coding agent is not connected, run `entire agent add --help` and install its supported integration. Entire checkpoints depend on supported coding-agent sessions and Git commits; merely running `entire enable` is not evidence of checkpoints. Always verify with `entire checkpoint list`.
-
-## Next milestones
-
-1. Add reviewed PDF-to-record mapping with verified source-page references; never let the LLM invent citation offsets.
-2. Add a real LLM decision loop for matching ambiguous descriptions and investigating amendments, with bounded retries and typed tools.
-3. Add an amendment-aware contract resolver and a new regression test.
-4. Add case draft/approval and persistent state.
-5. Add a cfo.ai plan and its evidence to submission artifacts.
-
-## Constraints
-
-- One supplier, single currency (INR), one purchase order, no tax/freight allocation.
-- JSON first, no OCR, no implicit parsing of attachments.
-- No invoice lines with repeated SKUs; those require review.
-- The current version does not check historical invoice duplication across separate requests.
-- `checkedInvoices` counts unique same-supplier/same-PO invoice IDs, even if skipped because of uncertain line items.
-- The recorded `evidence` field is supplied text, not a cryptographically validated document quote.
-- Prototype only: no authentication, upload persistence or customer-ready data security.
+`--probe` requires `NEATLOGS_API_KEY` in the shell. Entire checkpoints depend on supported coding-agent sessions and Git commits; verify with `entire checkpoint list` when using that workflow.
