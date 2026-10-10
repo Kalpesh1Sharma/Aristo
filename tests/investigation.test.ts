@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { investigate } from "../src/lib/investigation";
+import { extractWithConfiguredProvider, investigate, GROQ_ENDPOINT, GROQ_MODEL } from "../src/lib/investigation";
 
 function fixture({ billed = 120, amendment = false, conflicting = false } = {}) {
   const docs = [
@@ -65,4 +65,230 @@ test("unsupported quotes and invalid model response are rejected", async () => {
     ).state,
     "needs_review"
   );
+});
+
+test("offline mode makes zero network requests", async () => {
+  const originalMode = process.env.LLM_MODE;
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  process.env.LLM_MODE = "offline";
+  globalThis.fetch = (async () => { requests++; throw new Error("unexpected network request"); }) as typeof fetch;
+  try {
+    const f = fixture();
+    assert.equal((await investigate({ documents: f.docs })).state, "needs_review");
+    assert.equal(requests, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalMode === undefined) delete process.env.LLM_MODE; else process.env.LLM_MODE = originalMode;
+  }
+});
+
+test("live provider rejects endpoint overrides without making a request", async () => {
+  const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: "https://api.openai.com/v1/chat/completions", LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key" });
+  globalThis.fetch = (async () => { requests++; throw new Error("unexpected request"); }) as typeof fetch;
+  try {
+    await assert.rejects(extractWithConfiguredProvider(fixture().docs as Parameters<typeof extractWithConfiguredProvider>[0]));
+    assert.equal(requests, 0);
+    process.env.LLM_API_URL = GROQ_ENDPOINT;
+    process.env.LLM_MODEL = "gpt-4o-mini";
+    await assert.rejects(extractWithConfiguredProvider(fixture().docs as Parameters<typeof extractWithConfiguredProvider>[0]));
+    assert.equal(requests, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test("HTTP 429 fails safely with needs_review and no retry", async () => {
+  const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: GROQ_ENDPOINT, LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key" });
+  globalThis.fetch = (async () => { requests++; return new Response("quota detail with secret-ish content", { status: 429 }); }) as typeof fetch;
+  try {
+    const f = fixture();
+    const result = await investigate({ documents: f.docs });
+    assert.equal(result.state, "needs_review");
+    assert.equal(requests, 1);
+    assert.deepEqual(result.warnings, ["Extraction failed; manual review is required"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test("Groq request uses compatible completion token and strict cited-facts schema", async () => {
+  const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
+  const originalFetch = globalThis.fetch;
+  let requestUrl = "";
+  let sent: unknown;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: GROQ_ENDPOINT, LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key" });
+  globalThis.fetch = (async (input, init) => {
+    requestUrl = String(input);
+    sent = JSON.parse(String(init?.body));
+    return Response.json({ choices: [{ message: { content: "{}" } }] });
+  }) as typeof fetch;
+  try {
+    await extractWithConfiguredProvider(fixture().docs as Parameters<typeof extractWithConfiguredProvider>[0]);
+    type SentRequest = {
+      model: string;
+      max_completion_tokens: number;
+      reasoning_effort: string;
+      response_format: {
+        type: string;
+        json_schema: {
+          name: string;
+          strict: boolean;
+          schema: { properties: { documents: { items: { type: string; properties: Record<string, unknown> } } } };
+        };
+      };
+    };
+    const request = sent as SentRequest;
+    assert.equal(requestUrl, GROQ_ENDPOINT);
+    assert.equal(request.model, GROQ_MODEL);
+    assert.equal(request.max_completion_tokens, 1800);
+    assert.equal(request.reasoning_effort, "low");
+    assert.equal("max_tokens" in (sent as object), false);
+    assert.equal(request.response_format.type, "json_schema");
+    assert.equal(request.response_format.json_schema.name, "margin_ghost_facts");
+    assert.equal(request.response_format.json_schema.strict, true);
+    assert.equal(request.response_format.json_schema.schema.properties.documents.items.type, "object");
+    const walkSchema = (schema: unknown): void => {
+      if (Array.isArray(schema)) { schema.forEach(walkSchema); return; }
+      if (!schema || typeof schema !== "object") return;
+      const object = schema as Record<string, unknown>;
+      assert.equal("anyOf" in object, false);
+      if (object.type === "object") {
+        assert.equal(object.additionalProperties, false);
+        assert.ok(object.properties && typeof object.properties === "object");
+        assert.deepEqual(object.required, Object.keys(object.properties as Record<string, unknown>));
+      }
+      Object.values(object).forEach(walkSchema);
+    };
+    walkSchema(request.response_format.json_schema.schema);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test("Groq HTTP 400 diagnostics expose only allowlisted error identifiers", async () => {
+  const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
+  const originalFetch = globalThis.fetch;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: GROQ_ENDPOINT, LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key" });
+  globalThis.fetch = (async () => Response.json({ error: { code: "invalid_json_schema", type: "invalid_request_error", param: "response_format.json_schema.schema", message: "Rejected anyOf schema. secret and document contents must not escape" } }, { status: 400 })) as typeof fetch;
+  try {
+    const result = await investigate({ documents: fixture().docs });
+    assert.deepEqual(result.diagnostic, { category: "groq_http", status: 400, providerCode: "invalid_json_schema", providerType: "invalid_request_error", param: "response_format.json_schema.schema", providerKeyword: "anyof" });
+    assert.equal(JSON.stringify(result.diagnostic).includes("secret"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test("invalid model JSON and provider schema failures expose only safe diagnostics", async () => {
+  const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
+  const originalFetch = globalThis.fetch;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: GROQ_ENDPOINT, LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key" });
+  try {
+    const f = fixture();
+    globalThis.fetch = (async () => Response.json({ choices: [{ message: { content: "not-json containing private data" } }] })) as typeof fetch;
+    const invalidJson = await investigate({ documents: f.docs });
+    assert.deepEqual(invalidJson.diagnostic, { category: "invalid_json" });
+    globalThis.fetch = (async () => Response.json({ private_secret: "never report this" })) as typeof fetch;
+    const invalidShape = await investigate({ documents: f.docs });
+    assert.equal(invalidShape.diagnostic?.category, "schema_validation");
+    assert.ok(invalidShape.diagnostic?.fields?.length);
+    assert.equal(JSON.stringify(invalidShape.diagnostic).includes("private_secret"), false);
+    assert.equal(JSON.stringify(invalidShape.diagnostic).includes("never report this"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test("evidence mismatch returns a sanitized diagnostic field path", async () => {
+  const f = fixture();
+  const bad = structuredClone(f.facts);
+  const contract = bad.documents[0];
+  if (!("prices" in contract)) throw new Error("Expected contract prices");
+  contract.prices[0].unitPrice.excerpt = "not evidence";
+  const result = await withFacts(f, bad);
+  assert.equal(result.diagnostic?.category, "missing_evidence");
+  assert.deepEqual(result.diagnostic?.fields, ["documents[0].prices[0].unitPrice"]);
+});
+
+test("Groq document type aliases reconcile only to supplied source types", async () => {
+  const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
+  const originalFetch = globalThis.fetch;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: GROQ_ENDPOINT, LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key" });
+  try {
+    const f = fixture({ billed: 100 });
+    const aliasFacts = structuredClone(f.facts);
+    aliasFacts.documents[0].type = "Contract";
+    aliasFacts.documents[1].type = "Purchase Order";
+    aliasFacts.documents[2].type = "Invoice";
+    globalThis.fetch = (async () => Response.json({ choices: [{ message: { content: JSON.stringify(aliasFacts) } }] })) as typeof fetch;
+    const result = await investigate({ documents: f.docs });
+    assert.equal(result.state, "completed");
+    assert.equal(result.case?.totalPotentialOvercharge, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test("model output cannot change a supplied document identity", async () => {
+  const f = fixture({ billed: 100 });
+  const changedIdentity = structuredClone(f.facts);
+  changedIdentity.documents[2].id.value = "OTHER-INVOICE";
+  const result = await withFacts(f, changedIdentity);
+  assert.equal(result.state, "needs_review");
+  assert.equal(result.diagnostic?.category, "unsupported_evidence");
+  assert.deepEqual(result.diagnostic?.fields, ["documents[2].id"]);
+});
+
+test("incomplete citation objects fail schema validation without filling facts", async () => {
+  const f = fixture({ billed: 100 });
+  const incomplete = structuredClone(f.facts);
+  delete (incomplete.documents[0].supplierId as { excerpt?: string }).excerpt;
+  const result = await withFacts(f, incomplete);
+  assert.equal(result.state, "needs_review");
+  assert.equal(result.diagnostic?.category, "schema_validation");
+  assert.ok(result.diagnostic?.fields?.includes("documents[0].supplierId.excerpt"));
+});
+
+test("malformed field structures fail schema validation", async () => {
+  const f = fixture({ billed: 100 });
+  const malformed = structuredClone(f.facts);
+  const contract = malformed.documents[0] as { prices: { unitPrice: unknown }[] };
+  contract.prices[0].unitPrice = 100;
+  const result = await withFacts(f, malformed);
+  assert.equal(result.state, "needs_review");
+  assert.equal(result.diagnostic?.category, "schema_validation");
+  assert.ok(result.diagnostic?.fields?.includes("documents[0].prices[0].unitPrice"));
+});
+
+test("complete cited contract, purchase order, and invoice facts validate", async () => {
+  const f = fixture({ billed: 100 });
+  const result = await withFacts(f);
+  assert.equal(result.state, "completed");
+  assert.equal(result.case?.totalPotentialOvercharge, 0);
+  assert.equal(result.evidence.length, 22);
 });

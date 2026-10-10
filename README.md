@@ -1,6 +1,6 @@
 # MarginGhost V0.3 — evidence-backed supplier invoice investigation
 
-MarginGhost accepts extracted PDF page text, asks a server-side OpenAI-compatible provider to extract cited facts, validates every quote against its exact source page, resolves applicable price amendments, and uses the deterministic TypeScript audit engine to calculate a potential recovery case. No supplier communication or payment is performed. The existing JSON audit and PDF ingestion routes remain available.
+MarginGhost accepts extracted PDF page text, optionally asks Groq to extract cited facts, validates every quote against its exact source page, resolves applicable price amendments, and uses the deterministic TypeScript audit engine to calculate a potential recovery case. Offline mode is the default and does not contact the network. No supplier communication or payment is performed. The existing JSON audit and PDF ingestion routes remain available.
 
 ## Windows PowerShell setup
 
@@ -10,7 +10,7 @@ cd D:\
 cd D:\marginghost
 npm install
 Copy-Item .env.example .env.local
-# Configure LLM_API_KEY (and optionally NEATLOGS_API_KEY) in .env.local
+# Leave LLM_MODE=offline for offline operation. For local development only, set LLM_MODE=groq_free and configure LLM_API_KEY.
 npm run test
 npm run typecheck
 npm run dev
@@ -29,7 +29,7 @@ The `--probe` step requires a valid `NEATLOGS_API_KEY` set in your shell environ
 
 ## PDF investigation
 
-Send a multipart `POST` to `/api/ingest/pdf` with a `file` field containing a PDF (up to 10 MB and 250 pages). Assign the returned pages a document `id` and `type` (`contract`, `purchase_order`, `invoice`, or `amendment`) and submit `{ "documents": [...] }` to `/api/investigate`. The API returns a bounded state history and either a deterministic audit case or `needs_review`. Scanned PDFs have no OCR support. The model provider receives page text; Neatlogs custom spans capture neither inputs nor outputs. The extraction provider can be changed with `LLM_API_URL` and `LLM_MODEL`.
+Send a multipart `POST` to `/api/ingest/pdf` with a `file` field containing a PDF (up to 10 MB and 250 pages). Assign the returned pages a document `id` and `type` (`contract`, `purchase_order`, `invoice`, or `amendment`) and submit `{ "documents": [...] }` to `/api/investigate`. The API returns a bounded state history and either a deterministic audit case or `needs_review`. Scanned PDFs have no OCR support. Live extraction is restricted to authorized local development requests, the fixed Groq endpoint and `openai/gpt-oss-20b`, bounded input/output, and a 20-second timeout. Provider failures require manual review. Neatlogs spans capture neither inputs nor outputs.
 
 ## Entire setup (do this before coding with an agent)
 
