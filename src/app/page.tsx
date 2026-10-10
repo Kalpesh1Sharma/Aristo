@@ -1,6 +1,16 @@
-import { isDemoMode } from "@/lib/demo-mode";
-import HomeClient from "./home-client";
+const features = [
+  ["01", "Read the source", "Add contracts, purchase orders, amendments, and invoices. Printed document IDs anchor each record."],
+  ["02", "Compare the terms", "Resolve applicable prices and compare invoice line items against the governing documents."],
+  ["03", "Review the evidence", "Trace findings to page level excerpts. A person reviews every discrepancy before action."],
+];
 
 export default function Home() {
-  return <HomeClient demoMode={isDemoMode()} />;
+  return <main className="shell">
+    <header className="topbar"><Link className="brand" href="/" aria-label="MarginGhost home"><span className="brand-icon">M</span><span>MarginGhost <small>V0.4</small></span></Link><nav className="main-nav" aria-label="Main navigation"><Link href="/">Overview</Link><a href="/investigate">Investigate</a><a href="/demo">Synthetic demo</a></nav><a className="nav-cta" href="/investigate">Open workspace <span aria-hidden="true">→</span></a></header>
+    <section className="product-hero"><div className="eyebrow"><span className="dot"/> FINANCIAL CONTROL · INR</div><div className="product-hero-grid"><div><h1>Find invoice discrepancies. Follow every number to its source.</h1><p>MarginGhost compares supplier invoices with contracts and purchase orders, then gives your team page level evidence to review.</p><div className="product-actions"><a className="primary-button" href="/investigate">Open investigation workspace <span aria-hidden="true">→</span></a><a className="secondary-button" href="/demo">Explore synthetic examples <span aria-hidden="true">↗</span></a></div><div className="hero-note">Evidence led review <span>·</span> Human decision, always</div></div><aside className="hero-proof"><div className="proof-label">THE REVIEW PRINCIPLE</div><div className="proof-amount">₹18,000</div><strong>Potential discrepancy</strong><p>One invoice line, compared with its purchase order and contract.</p><div className="proof-rule"><span>Invoice</span><b>₹525 / unit</b></div><div className="proof-rule"><span>Purchase order</span><b>₹480 / unit</b></div><div className="proof-rule"><span>Source evidence</span><b>Page 1 · I-001</b></div><small>Synthetic illustration · not a live finding</small></aside></div></section>
+    <section className="how-section" aria-labelledby="how-heading"><div className="section-heading"><div><div className="step">A TRACEABLE REVIEW</div><h2 id="how-heading">From document set to evidence</h2></div><p>Clear inputs, deterministic financial checks, and source references for a human to verify.</p></div><div className="how-grid">{features.map(([number, title, copy]) => <article className="how-card" key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
+    <section className="product-cta"><div><div className="step">START WITH A CASE</div><h2>Bring the documents together.</h2><p>Use the workspace to prepare a document set, or inspect the fixed synthetic examples first.</p></div><div className="product-actions"><a className="primary-button" href="/investigate">Open workspace <span aria-hidden="true">→</span></a><a className="text-action" href="/demo">View synthetic demo ↗</a></div></section>
+    <footer><span>MarginGhost <small>V0.4</small></span><span>Evidence first. Human reviewed.</span></footer>
+  </main>;
 }
+import Link from "next/link";

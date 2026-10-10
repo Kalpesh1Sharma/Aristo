@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { POST as investigatePost } from "../src/app/api/investigate/route";
 import { POST as ingestPost } from "../src/app/api/ingest/pdf/route";
+import { POST as auditPost } from "../src/app/api/audit/route";
 import { extractPdfPages } from "../src/lib/pdf-ingestion";
 import { auditDocuments } from "../src/lib/audit";
 import { readFile } from "node:fs/promises";
@@ -60,5 +61,28 @@ test("demo mode rejects direct multipart PDF ingestion requests before parsing",
     assert.match((await response.json()).error, /PDF ingestion is disabled in synthetic demo mode/i);
   } finally {
     if (previous === undefined) delete process.env.DEMO_MODE; else process.env.DEMO_MODE = previous;
+  }
+});
+
+test("production rejects direct requests to every processing API even when DEMO_MODE is false", async () => {
+  const previousMode = process.env.DEMO_MODE;
+  const env = process.env as Record<string, string | undefined>;
+  const previousNodeEnv = env.NODE_ENV;
+  process.env.DEMO_MODE = "false";
+  env.NODE_ENV = "production";
+  try {
+    const investigation = await investigatePost(new Request("http://example.test/api/investigate", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ documents: [] })
+    }));
+    const form = new FormData();
+    form.set("file", new File(["not parsed"], "invoice.pdf", { type: "application/pdf" }));
+    const ingestion = await ingestPost(new Request("http://example.test/api/ingest/pdf", { method: "POST", body: form }));
+    const audit = await auditPost(new Request("http://example.test/api/audit", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({})
+    }));
+    assert.deepEqual([investigation.status, ingestion.status, audit.status], [403, 403, 403]);
+  } finally {
+    if (previousMode === undefined) delete process.env.DEMO_MODE; else process.env.DEMO_MODE = previousMode;
+    if (previousNodeEnv === undefined) delete env.NODE_ENV; else env.NODE_ENV = previousNodeEnv;
   }
 });

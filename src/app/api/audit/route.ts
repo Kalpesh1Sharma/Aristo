@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auditInputSchema } from "@/lib/schema";
 import { auditDocuments } from "@/lib/audit";
+import { isDemoMode } from "@/lib/demo-mode";
 import { ensureTracing, tracedParse, tracedAudit, tracedWorkflow, flushTracing } from "@/lib/observability";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   let tracing = false;
   try {
+    if (isDemoMode()) return NextResponse.json({ error: "Audit API is disabled in synthetic demo mode" }, { status: 403 });
     if (Number(request.headers.get("content-length") || 0) > 1024 * 1024) {
       return NextResponse.json({ error: "Payload too large; 1MB maximum" }, { status: 413 });
     }
