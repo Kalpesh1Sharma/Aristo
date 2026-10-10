@@ -1,0 +1,26 @@
+Implement MarginGhost V0.3: evidence-backed autonomous supplier invoice investigation.
+
+First inspect the existing project architecture, Zod schemas, deterministic audit engine, PDF ingestion endpoint, neatlogs observability wrapper, and automated tests.
+
+Build a narrow, reliable end-to-end pipeline:
+
+1. Accept extracted PDF documents identified as contract, purchase order, invoice, or amendment.
+2. Use a server-side LLM provider abstraction with a configured API key to extract structured supplier, SKU, quantity, unit price, effective date, and contractual terms.
+3. Attach source document identifiers, page numbers, and exact supporting excerpts to every material extracted field.
+4. Validate extracted facts against their source text, and reject missing or unsupported information instead of inventing data.
+5. Implement a bounded investigation workflow with explicit states: extract, match, investigate, verify, needs_review, completed.
+6. Handle amended contracts correctly: a newer valid price amendment must supersede an older price agreement when applicable.
+7. Use the existing deterministic TypeScript audit engine for monetary calculations.
+8. Generate an evidence-backed potential recovery case, or return needs_review when facts conflict or are insufficient.
+9. Add real neatlogs spans for extraction, matching, investigation, retries, and verification. Record only safe metadata, never raw financial documents or secrets.
+10. Preserve existing JSON audit and PDF ingestion endpoints.
+11. Add deterministic synthetic tests for clean invoices, genuine overcharges, valid amendments, conflicting evidence, and invalid model responses.
+
+Constraints:
+- Keep the agent bounded and testable, with no automatic supplier emails or payments.
+- Don't modify credentials or expose API keys.
+- Don't commit, push, or deploy.
+- Run tests, typecheck, lint, and production build.
+- If blocked by platform-specific WSL dependencies, report the limitation clearly rather than making destructive changes.
+
+Prioritize one reliable agent workflow over unnecessary frameworks or UI polish. Report the implemented functionality, files changed, tests, and limitations.
