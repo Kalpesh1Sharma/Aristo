@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { extractPdfPages } from "@/lib/pdf-ingestion";
+import { isDemoMode } from "@/lib/demo-mode";
 
 export const runtime = "nodejs";
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: Request) {
+  if (isDemoMode()) return NextResponse.json({ error: "PDF ingestion is disabled in synthetic demo mode" }, { status: 403 });
   try {
     const form = await request.formData();
     const file = form.get("file");

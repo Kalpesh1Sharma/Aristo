@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { investigate } from "@/lib/investigation";
+import { isDemoMode } from "@/lib/demo-mode";
 import { ensureTracing, flushTracing, tracedWorkflow } from "@/lib/observability";
 
 export const runtime = "nodejs";
@@ -20,6 +21,7 @@ function isLocalDevelopmentRequest(request: Request) {
 export async function POST(request: Request) {
   let tracing = false;
   try {
+    if (isDemoMode()) return NextResponse.json({ error: "Live investigation is disabled in synthetic demo mode" }, { status: 403 });
     if (Number(request.headers.get("content-length") || 0) > 1024 * 1024) return NextResponse.json({ error: "Payload too large; 1MB maximum" }, { status: 413 });
     const mode = process.env.LLM_MODE || "offline";
     if (mode !== "offline" && mode !== "groq_free") return NextResponse.json({ error: "Invalid investigation mode" }, { status: 503 });
