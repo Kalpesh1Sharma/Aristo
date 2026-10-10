@@ -1,0 +1,134 @@
+Configure MarginGhost V0.3 to safely use Groq's free-tier API.
+
+The Groq endpoint and `openai/gpt-oss-20b` model have already been tested successfully.
+
+Inspect the existing investigation provider and API route.
+
+Implement:
+1. Two modes: `offline` (default) and `groq_free`.
+2. Allow only `https://api.groq.com/openai/v1/chat/completions` for live requests.
+3. Use only `openai/gpt-oss-20b`.
+4. Maximum 2 API requests per investigation, 20-second timeout per request and bounded input/output tokens.
+5. On quota exhaustion, invalid JSON, timeout or provider error, return `needs_review` without contacting another provider.
+6. No automatic retry to any paid API.
+7. Offline mode must never make network requests.
+8. Restrict live API access to authorized local development requests.
+9. Never log raw documents or credentials to neatlogs.
+10. Add tests verifying zero network requests in offline mode, strict endpoint validation and safe failure on HTTP 429.
+
+Preserve the existing PDF extraction and deterministic financial audit. Do not modify credential files, commit, push or deploy.
+
+Run tests, TypeScript, lint and build. Report any errors.
+
+---
+
+Diagnose MarginGhost's first live Groq investigation failure.
+
+The `/api/investigate` route returned:
+
+state: needs_review
+warnings: ["Extraction failed; manual review is required"]
+states: ["extract", "needs_review"]
+
+The PDF ingestion endpoint successfully extracted all three synthetic documents. A separate direct Groq API request using openai/gpt-oss-20b returned READY.
+
+Inspect the existing Groq provider implementation and investigation workflow.
+
+Add development-only, sanitized diagnostics that identify the failure category:
+- offline mode or missing configuration
+- local request rejected
+- Groq HTTP status (without response body)
+- timeout or network error
+- invalid JSON
+- Zod schema validation failure, including safe field paths
+- missing or unsupported evidence
+
+Do not log API keys, raw documents, model responses, or sensitive values.
+
+Check that the provider request uses Groq-compatible chat completion parameters and structured output settings. Fix confirmed compatibility problems only.
+
+Preserve the existing deterministic financial audit and safety guard. Never contact another provider, enable billing, or exceed one Groq request per investigation.
+
+Add tests for any confirmed bug. Run TypeScript, tests, lint and build where possible.
+
+Do not commit, push or modify .env.
+
+---
+
+Fix two issues in MarginGhost V0.3.4 without weakening financial evidence validation.
+
+Issue A: The live Groq investigation returns `needs_review` with diagnostic category `schema_validation` and fields `documents[0].type`, `documents[1].type`, `documents[2].type`.
+
+Issue B: The test "evidence mismatch returns a sanitized diagnostic field path" fails because expected `documents[0].prices[0].unitPrice` differs from actual `documents.<key>.prices.<key>.unitPrice`.
+
+Instructions:
+
+1. Inspect `src/lib/investigation.ts`, `src/lib/schema.ts`, `src/app/api/investigate/route.ts`, and `tests/investigation.test.ts`.
+2. Determine how source document types are supplied to the model, how the model is instructed to format its response, and where model output is validated.
+3. Modify the extraction prompt to explicitly require one output object per supplied document, preserve the supplied document ID, and use the exact machine-readable document type: `contract`, `purchase_order`, `invoice`, or `amendment`.
+4. Since the API request already supplies trustworthy document IDs and types, consider validating model output against those supplied identities rather than relying on the model to freely invent document types. Do not permit it to change document identity.
+5. If needed, normalize only a tightly defined allowlist of type aliases before Zod validation. Never guess document types from financial content or silently accept unknown values.
+6. Keep all source quote, page number, source ID, amendment, and deterministic monetary verification checks unchanged.
+7. Fix the diagnostic path formatting so safe numeric array indices are preserved. Alternatively, update the test if the intended privacy policy deliberately masks indices. Make the implementation and tests consistent without exposing financial values.
+8. Add a regression test for Groq returning differently formatted document type names. Add a test rejecting a document whose identity does not match its supplied source.
+9. Preserve the one-Groq-request limit, 20-second timeout, Groq-only endpoint, offline default, local-development restriction, and zero-paid-fallback behavior.
+10. Do not modify `.env`, commit, push, deploy, or log model responses or financial document contents.
+
+Run TypeScript and lint; explain any tests/build blocked by WSL's Windows-native dependencies. I will run the full test suite in Windows PowerShell.
+
+---
+
+Diagnose and fix MarginGhost's live Groq structured extraction failure.
+
+Current state:
+- Groq connection is verified.
+- All 21 Windows tests, TypeScript, lint, and production build pass.
+- Live POST /api/investigate returns needs_review with diagnostic category schema_validation.
+- Errors include documents[0].id.page, documents[0].id.excerpt, documents[0].supplierId, documents[0].currency, documents[0].validFrom, documents[0].prices, and corresponding required fields in the PO and invoice.
+- Document type errors were fixed in the previous iteration.
+
+Tasks:
+
+1. Inspect the exact Zod schema, Groq system/user prompts, JSON parsing code, and model response handling.
+2. Determine the actual structural mismatch. Use existing synthetic documents and a locally constructed representative model response, or an explicitly authorized single Groq free-tier request if necessary.
+3. If inspecting model output, use only synthetic documents. Never print credentials or production financial documents. Do not log raw outputs to neatlogs.
+4. Ensure the system prompt explicitly defines the full expected JSON structure, including the required citation object format: value, sourceId, page, excerpt.
+5. Make the extraction prompt include a compact example of correctly structured contract, purchase_order, and invoice objects, matching the existing Zod schema exactly.
+6. Keep numeric values numeric, page numbers numeric, and dates in the expected format.
+7. Do not fabricate citations or copy evidence from another document. A source excerpt must match the exact source page and support the claimed value.
+8. Do not automatically inject missing model-extracted facts merely to satisfy Zod. Missing, contradictory, or unsupported evidence must fail closed.
+9. Keep document IDs and document types anchored to the supplied source identity.
+10. Preserve the Groq-only endpoint, one-request limit, 20-second timeout, bounded tokens, local-development guard, offline default, and no paid fallback.
+11. If the model's 1,800-token output limit is too small for full cited extraction, estimate the required output length and increase the cap conservatively only within free-tier limits. Do not automatically make additional requests.
+12. Add regression tests for incomplete citations, malformed field structures, and correctly formed cited facts.
+13. Do not modify .env, commit, push, or deploy.
+
+Run typecheck and lint. Report the confirmed root cause and code changes. I will run Windows tests and the build.
+
+---
+
+Fix the live Groq HTTP 400 error in MarginGhost without weakening financial verification or enabling paid usage.
+
+Current status:
+- 24/24 Windows tests pass.
+- TypeScript, ESLint, and Next.js production build pass.
+- The Groq API key and openai/gpt-oss-20b model work with a basic chat completion.
+- After switching to response_format=json_schema with strict=true, POST /api/investigate returns needs_review, diagnostic category groq_http, status 400.
+- The actual Groq error detail has not yet been inspected, so do not assume the precise cause.
+
+Tasks:
+
+1. Inspect the actual request payload produced by src/lib/investigation.ts and its JSON Schema.
+2. Compare it with Groq's strict structured-output requirements at https://console.groq.com/docs/structured-outputs.
+3. Check that every object has additionalProperties:false, all declared properties are required, and optional data is modeled compatibly (for example, required nullable fields where supported).
+4. Check for unsupported JSON Schema keywords, discriminated unions, nullable fields, and nested object constraints.
+5. Check reasoning_effort, max_completion_tokens and response_format for compatibility with openai/gpt-oss-20b.
+6. Add a development-only sanitized diagnostic for Groq HTTP 400 that can identify the provider's error code, error type, and relevant parameter name when available. Never print full provider response bodies, document content, credentials, or model output. Sanitize and allowlist diagnostics.
+7. Add an offline test validating the generated request's schema structure recursively, including required fields and additionalProperties.
+8. Prefer fixing strict JSON Schema mode. If Groq explicitly rejects some necessary schema feature, simplify the generation schema without changing the existing Zod and evidence-verification schema.
+9. Only if strict mode cannot be supported safely, use json_object mode with the fully explicit prompt and retain all strict server-side validation. Document the limitation.
+10. Preserve Groq-only endpoint enforcement, one API request per investigation, 20-second timeout, local-development restriction, and zero paid fallback.
+11. No automatic live retries. No real financial documents. Do not modify .env, commit, push, or deploy.
+12. Run typecheck and lint. I will run Windows tests and build.
+
+Report the confirmed HTTP 400 root cause, not just a possible explanation.

@@ -1,0 +1,140 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4K4QP3CX1GJQ04JPDAZ3KYG",
+  "session_id": "01a125f0-b2ac-7093-81e8-7f2d320dc9d1",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T14:51:24.187617609Z",
+  "branch": "main",
+  "checkpoints_count": 5,
+  "save_step_count": 5,
+  "files_touched": [
+    ".env.example",
+    "README.md",
+    "src/app/api/investigate/route.ts",
+    "src/lib/investigation.ts",
+    "tests/investigation.test.ts"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-luna",
+  "turn_id": "7124a9aa706d",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 264487,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 14177280,
+    "output_tokens": 76072,
+    "api_call_count": 128,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T14:51:23.929215815Z",
+    "agent_lines": 442,
+    "agent_removed": 26,
+    "human_added": 1085,
+    "human_modified": 3,
+    "human_removed": 0,
+    "total_committed": 1530,
+    "total_lines_changed": 1556,
+    "agent_percentage": 30.077120822622106,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 88,
+      "user_lines_removed": 12,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        ".env.example": 11,
+        "next-env.d.ts": 2,
+        "test-invoice.pdf": 68
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        ".env.example": 3,
+        "next-env.d.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 281,
+      "user_lines_removed": 9,
+      "agent_lines_added": 182,
+      "agent_lines_removed": 26,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        "fixtures/live-demo/amendment.pdf": 68,
+        "fixtures/live-demo/contract.pdf": 68,
+        "fixtures/live-demo/invoice.pdf": 68,
+        "fixtures/live-demo/purchase-order.pdf": 68,
+        "next-env.d.ts": 2
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        "next-env.d.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 281,
+      "user_lines_removed": 9,
+      "agent_lines_added": 278,
+      "agent_lines_removed": 30,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        "fixtures/live-demo/amendment.pdf": 68,
+        "fixtures/live-demo/contract.pdf": 68,
+        "fixtures/live-demo/invoice.pdf": 68,
+        "fixtures/live-demo/purchase-order.pdf": 68,
+        "next-env.d.ts": 2
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        "next-env.d.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 281,
+      "user_lines_removed": 9,
+      "agent_lines_added": 350,
+      "agent_lines_removed": 31,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        "fixtures/live-demo/amendment.pdf": 68,
+        "fixtures/live-demo/contract.pdf": 68,
+        "fixtures/live-demo/invoice.pdf": 68,
+        "fixtures/live-demo/purchase-order.pdf": 68,
+        "next-env.d.ts": 2
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        "next-env.d.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 281,
+      "user_lines_removed": 9,
+      "agent_lines_added": 447,
+      "agent_lines_removed": 31,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        "fixtures/live-demo/amendment.pdf": 68,
+        "fixtures/live-demo/contract.pdf": 68,
+        "fixtures/live-demo/invoice.pdf": 68,
+        "fixtures/live-demo/purchase-order.pdf": 68,
+        "next-env.d.ts": 2
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        "next-env.d.ts": 2
+      }
+    }
+  ]
+}
