@@ -1,0 +1,1 @@
+Implement PDF ingestion as a separate module. Preserve the existing JSON audit flow, and avoid logging raw document content or credentials to neatlogs. Do not commit or push; report all changed files and test results.
