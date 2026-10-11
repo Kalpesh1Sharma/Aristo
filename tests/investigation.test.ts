@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { extractWithConfiguredProvider, investigate, GROQ_ENDPOINT, GROQ_MODEL } from "../src/lib/investigation";
+import { extractWithConfiguredProvider, investigate, GROQ_ENDPOINT, GROQ_MODEL, GROQ_EXTRACTION_EXAMPLE } from "../src/lib/investigation";
 import { POST as investigatePost } from "../src/app/api/investigate/route";
 
 function fixture({ billed = 120, contractPrice = 100, amendment = false, conflicting = false } = {}) {
@@ -234,6 +234,7 @@ test("Groq request uses compatible completion token and strict cited-facts schem
           schema: { properties: { documents: { items: { type: string; properties: Record<string, unknown> } } } };
         };
       };
+      messages: { role: string; content: string }[];
     };
     const request = sent as SentRequest;
     assert.equal(requestUrl, GROQ_ENDPOINT);
@@ -245,12 +246,30 @@ test("Groq request uses compatible completion token and strict cited-facts schem
     assert.equal(request.response_format.json_schema.name, "margin_ghost_facts");
     assert.equal(request.response_format.json_schema.strict, true);
     assert.equal(request.response_format.json_schema.schema.properties.documents.items.type, "object");
+    const exampleJson = JSON.stringify(GROQ_EXTRACTION_EXAMPLE);
+    assert.ok(request.messages[0].content.includes(exampleJson));
+    const assertExampleMatchesSchema = (value: unknown, schema: unknown): void => {
+      if (!schema || typeof schema !== "object") return;
+      const schemaObject = schema as Record<string, unknown>;
+      if (value === null) return;
+      if (Array.isArray(value)) {
+        value.forEach(item => assertExampleMatchesSchema(item, schemaObject.items));
+      } else if (value && typeof value === "object" && schemaObject.properties && typeof schemaObject.properties === "object") {
+        const properties = schemaObject.properties as Record<string, unknown>;
+        assert.deepEqual(Object.keys(value).sort(), Object.keys(properties).sort());
+        assert.deepEqual(schemaObject.required, Object.keys(properties));
+        for (const [key, child] of Object.entries(value)) assertExampleMatchesSchema(child, properties[key]);
+      } else if (schemaObject.type === "array") {
+        assert.fail("Expected prompt example array");
+      }
+    };
+    assertExampleMatchesSchema(GROQ_EXTRACTION_EXAMPLE, request.response_format.json_schema.schema);
     const walkSchema = (schema: unknown): void => {
       if (Array.isArray(schema)) { schema.forEach(walkSchema); return; }
       if (!schema || typeof schema !== "object") return;
       const object = schema as Record<string, unknown>;
       assert.equal("anyOf" in object, false);
-      if (object.type === "object") {
+      if (object.properties && typeof object.properties === "object") {
         assert.equal(object.additionalProperties, false);
         assert.ok(object.properties && typeof object.properties === "object");
         assert.deepEqual(object.required, Object.keys(object.properties as Record<string, unknown>));
@@ -273,8 +292,27 @@ test("Groq HTTP 400 diagnostics expose only allowlisted error identifiers", asyn
   globalThis.fetch = (async () => Response.json({ error: { code: "invalid_json_schema", type: "invalid_request_error", param: "response_format.json_schema.schema", message: "Rejected anyOf schema. secret and document contents must not escape" } }, { status: 400 })) as typeof fetch;
   try {
     const result = await investigate({ documents: fixture().docs });
-    assert.deepEqual(result.diagnostic, { category: "groq_http", status: 400, providerCode: "invalid_json_schema", providerType: "invalid_request_error", param: "response_format.json_schema.schema", providerKeyword: "anyof" });
+    assert.deepEqual(result.diagnostic, { category: "groq_http", status: 400, providerCode: "invalid_json_schema", providerType: "invalid_request_error", param: "response_format.json_schema.schema", providerKeyword: "anyof", providerFailureStage: "request_schema" });
     assert.equal(JSON.stringify(result.diagnostic).includes("secret"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test("Groq generated-output diagnostics classify failed_generation without exposing it", async () => {
+  const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
+  const originalFetch = globalThis.fetch;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: GROQ_ENDPOINT, LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key" });
+  globalThis.fetch = (async () => Response.json({ error: { code: "json_validate_failed", type: "invalid_request_error", message: "Generated JSON failed required validation", failed_generation: "raw document contents that must not escape" } }, { status: 400 })) as typeof fetch;
+  try {
+    const result = await investigate({ documents: fixture().docs });
+    assert.equal(result.diagnostic?.providerCode, "json_validate_failed");
+    assert.equal(result.diagnostic?.providerKeyword, "required");
+    assert.equal(result.diagnostic?.providerFailureStage, "generated_output");
+    assert.equal(JSON.stringify(result.diagnostic).includes("raw document contents"), false);
   } finally {
     globalThis.fetch = originalFetch;
     for (const [key, value] of Object.entries({ LLM_MODE: saved.mode, LLM_API_URL: saved.url, LLM_MODEL: saved.model, LLM_API_KEY: saved.key })) {

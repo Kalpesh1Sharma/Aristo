@@ -58,16 +58,36 @@ const groqFactsJsonSchema = {
   required: ["documents"],
   additionalProperties: false
 };
-const extractionSystemPrompt = `Extract explicitly stated facts only. Return one JSON object matching the supplied JSON Schema, with one document per input document. The schema requires null placeholders for fields inapplicable to that document type; use null only for those fields or an unstated optional validTo/effectiveTo. Never use null for a required applicable fact.
+const exampleCitation = (value: string | number, sourceId: string, excerpt: string) => ({ value, sourceId, page: 1, excerpt });
+export const GROQ_EXTRACTION_EXAMPLE = {
+  documents: [
+    {
+      type: "contract", id: exampleCitation("C1", "C1", "Contract C1"), supplierId: exampleCitation("S1", "C1", "Supplier S1"), currency: exampleCitation("INR", "C1", "INR"),
+      contractId: null, purchaseOrderId: null, validFrom: exampleCitation("2025-01-01", "C1", "valid 2025-01-01"), validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: null, issuedAt: null,
+      prices: [{ sku: exampleCitation("SKU-X", "C1", "SKU-X"), unitPrice: exampleCitation(100, "C1", "price INR 100") }], items: null
+    },
+    {
+      type: "purchase_order", id: exampleCitation("P1", "P1", "PO P1"), supplierId: exampleCitation("S1", "P1", "Supplier S1"), currency: exampleCitation("INR", "P1", "INR"),
+      contractId: exampleCitation("C1", "P1", "Contract C1"), purchaseOrderId: null, validFrom: null, validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: exampleCitation("2025-07-01", "P1", "ordered 2025-07-01"), issuedAt: null,
+      prices: null, items: [{ sku: exampleCitation("SKU-X", "P1", "SKU-X"), quantity: exampleCitation(10, "P1", "qty 10"), unitPrice: exampleCitation(100, "P1", "price INR 100") }]
+    },
+    {
+      type: "invoice", id: exampleCitation("I1", "I1", "Invoice I1"), supplierId: exampleCitation("S1", "I1", "Supplier S1"), currency: exampleCitation("INR", "I1", "INR"),
+      contractId: null, purchaseOrderId: exampleCitation("P1", "I1", "PO P1"), validFrom: null, validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: null, issuedAt: exampleCitation("2025-07-02", "I1", "issued 2025-07-02"),
+      prices: null, items: [{ sku: exampleCitation("SKU-X", "I1", "SKU-X"), quantity: exampleCitation(10, "I1", "qty 10"), unitPrice: exampleCitation(120, "I1", "price INR 120") }]
+    }
+  ]
+} as const;
+const extractionSystemPrompt = `Extract explicitly stated facts only. Return one JSON object matching the supplied JSON Schema, with one document per input document. Every schema property is required. Use null for fields inapplicable to that document type and for an unstated optional validTo/effectiveTo only. Never use null for a required applicable fact.
 For every purchase_order document, contractId is required and must be a complete citation object, never null or omitted. When the PO prints a reference such as "contract C-001", return {"value":"C-001","sourceId":"<that PO's input ID>","page":<printed page number>,"excerpt":"<exact substring containing contract C-001>"}. Do not use the PO's own ID or filename as the contract value, and do not infer or fabricate a citation if the reference is absent or unclear.
 Every factual field must be a citation object exactly shaped as {"value": ..., "sourceId": "...", "page": 1, "excerpt": "..."}. Keep numeric values numeric, page numbers integers, dates YYYY-MM-DD strings, and currency INR. Each excerpt must be an exact substring from that sourceId and page and must support the value. Never transfer a citation between documents, infer facts, or fabricate missing citations. Preserve each input document's ID and type exactly; use only contract, purchase_order, invoice, amendment.
-The following synthetic example shows the citation and type-specific nested structure. Its values and citations are illustrative only; never copy them. In the response, also include every schema-required field that is inapplicable to a type as null. Use the actual supplied source text and cite each claim from its own source page:
-{"documents":[{"type":"contract","id":{"value":"C1","sourceId":"C1","page":1,"excerpt":"Contract C1"},"supplierId":{"value":"S1","sourceId":"C1","page":1,"excerpt":"Supplier S1"},"currency":{"value":"INR","sourceId":"C1","page":1,"excerpt":"INR"},"validFrom":{"value":"2025-01-01","sourceId":"C1","page":1,"excerpt":"2025-01-01"},"prices":[{"sku":{"value":"SKU-X","sourceId":"C1","page":1,"excerpt":"SKU-X"},"unitPrice":{"value":100,"sourceId":"C1","page":1,"excerpt":"100"}}]},{"type":"purchase_order","id":{"value":"P1","sourceId":"P1","page":1,"excerpt":"PO P1"},"supplierId":{"value":"S1","sourceId":"P1","page":1,"excerpt":"Supplier S1"},"contractId":{"value":"C1","sourceId":"P1","page":1,"excerpt":"Contract C1"},"currency":{"value":"INR","sourceId":"P1","page":1,"excerpt":"INR"},"orderedAt":{"value":"2025-07-01","sourceId":"P1","page":1,"excerpt":"2025-07-01"},"items":[{"sku":{"value":"SKU-X","sourceId":"P1","page":1,"excerpt":"SKU-X"},"quantity":{"value":10,"sourceId":"P1","page":1,"excerpt":"quantity 10"},"unitPrice":{"value":100,"sourceId":"P1","page":1,"excerpt":"price 100"}}]},{"type":"invoice","id":{"value":"I1","sourceId":"I1","page":1,"excerpt":"Invoice I1"},"supplierId":{"value":"S1","sourceId":"I1","page":1,"excerpt":"Supplier S1"},"purchaseOrderId":{"value":"P1","sourceId":"I1","page":1,"excerpt":"PO P1"},"currency":{"value":"INR","sourceId":"I1","page":1,"excerpt":"INR"},"issuedAt":{"value":"2025-07-02","sourceId":"I1","page":1,"excerpt":"2025-07-02"},"items":[{"sku":{"value":"SKU-X","sourceId":"I1","page":1,"excerpt":"SKU-X"},"quantity":{"value":10,"sourceId":"I1","page":1,"excerpt":"quantity 10"},"unitPrice":{"value":120,"sourceId":"I1","page":1,"excerpt":"price 120"}}]}]}
-For amendments, return type amendment with cited id, supplierId, contractId, currency, effectiveFrom, optional effectiveTo, and prices entries containing cited sku and unitPrice. Do not add fields. Do not output commentary or markdown.`;
+The following synthetic example shows the citation and type-specific nested structure. Every object includes all schema-required keys, with null only for inapplicable fields and unstated optional dates. Its values and citations are illustrative only; never copy them. Use the actual supplied source text and cite each claim from its own source page:
+${JSON.stringify(GROQ_EXTRACTION_EXAMPLE)}
+For each amendment input, return one amendment object with cited id, supplierId, contractId, currency, effectiveFrom, optional effectiveTo, and prices entries containing cited sku and unitPrice. Include all schema-required keys; set purchaseOrderId, validFrom, validTo, orderedAt, issuedAt, and items to null where inapplicable, and effectiveTo to null when unstated. Do not add fields. Do not output commentary or markdown.`;
 export type ModelExtractor = (docs: SourceDocument[]) => Promise<unknown>;
 export type DiagnosticCategory = "offline_mode" | "missing_configuration" | "invalid_configuration" | "input_limit" | "groq_http" | "timeout" | "network_error" | "invalid_json" | "schema_validation" | "missing_evidence" | "unsupported_evidence" | "investigation_error";
 export type StructuralFailure = { field: string; reason: "missing" | "null" | "wrong_type" | "invalid_value" | "unknown_structure" };
-export type SafeDiagnostic = { category: DiagnosticCategory; status?: number; fields?: string[]; structuralFailures?: StructuralFailure[]; providerCode?: string; providerType?: string; param?: string; providerKeyword?: string };
+export type SafeDiagnostic = { category: DiagnosticCategory; status?: number; fields?: string[]; structuralFailures?: StructuralFailure[]; providerCode?: string; providerType?: string; param?: string; providerKeyword?: string; providerFailureStage?: "generated_output" | "request_schema" | "unknown" };
 export type EvidenceReference = { field: string; sourceId: string; page: number; excerpt: string };
 export type SelfAudit = { proposedFinding: string; checks: { name: string; result: "passed" | "failed" | "not_verified"; explanation: string }[]; supportingEvidence: EvidenceReference[]; contradictoryEvidence: EvidenceReference[]; disposition: "supported" | "rejected" | "needs_review"; explanation: string };
 export type InvestigationResult = { state: "completed" | "needs_review"; case: ReturnType<typeof auditDocuments> | null; evidence: EvidenceReference[]; warnings: string[]; states: string[]; selfAudit?: SelfAudit[]; diagnostic?: SafeDiagnostic };
@@ -110,16 +130,21 @@ const sanitizeProviderValue = (value: unknown, allowed: readonly string[], ident
   // Provider identifiers are diagnostic enums, never free-text messages.
   return identifierPattern.test(value) ? value.slice(0, 80) : "other";
 };
-function safeGroqErrorDetails(body: unknown): Pick<SafeDiagnostic, "providerCode" | "providerType" | "param" | "providerKeyword"> {
+function safeGroqErrorDetails(body: unknown): Pick<SafeDiagnostic, "providerCode" | "providerType" | "param" | "providerKeyword" | "providerFailureStage"> {
   if (!body || typeof body !== "object") return {};
   const error = (body as Record<string, unknown>).error;
   if (!error || typeof error !== "object") return {};
   const fields = error as Record<string, unknown>;
   const identifier = /^[a-z0-9][a-z0-9_.-]{0,79}$/;
-  const providerCode = sanitizeProviderValue(fields.code, ["invalid_json_schema", "schema_validation_error", "unsupported_value", "invalid_value", "context_length_exceeded", "rate_limit_exceeded"], identifier);
+  const providerCode = sanitizeProviderValue(fields.code, ["invalid_json_schema", "json_validate_failed", "schema_validation_error", "unsupported_value", "invalid_value", "context_length_exceeded", "rate_limit_exceeded"], identifier);
   const providerType = sanitizeProviderValue(fields.type, ["invalid_request_error", "authentication_error", "permission_error", "rate_limit_error", "server_error"], identifier);
   const param = sanitizeProviderValue(fields.param, ["response_format", "response_format.json_schema", "response_format.json_schema.schema", "model", "messages", "reasoning_effort", "max_completion_tokens", "temperature"], identifier);
   const message = typeof fields.message === "string" ? fields.message.toLowerCase() : "";
+  const providerFailureStage = typeof fields.failed_generation === "string" || ["generated json", "generated output", "failed_generation", "failed generation"].some(phrase => message.includes(phrase))
+    ? "generated_output" as const
+    : param === "response_format.json_schema.schema" || ["invalid_json_schema", "response_format.json_schema", "schema is invalid", "unsupported schema"].some(phrase => message.includes(phrase))
+      ? "request_schema" as const
+      : "unknown" as const;
   const providerKeyword = ["anyof", "additionalproperties", "required", "items", "properties", "enum", "integer", "nullable", "type"]
     .find(keyword => message.includes(keyword));
   const messageParam = ["response_format.json_schema.schema", "response_format.json_schema", "response_format", "reasoning_effort", "max_completion_tokens", "temperature", "model", "messages"]
@@ -128,7 +153,8 @@ function safeGroqErrorDetails(body: unknown): Pick<SafeDiagnostic, "providerCode
     ...(providerCode ? { providerCode } : {}),
     ...(providerType ? { providerType } : {}),
     ...(param ? { param } : messageParam ? { param: messageParam } : {}),
-    ...(providerKeyword ? { providerKeyword } : {})
+    ...(providerKeyword ? { providerKeyword } : {}),
+    providerFailureStage
   };
 }
 

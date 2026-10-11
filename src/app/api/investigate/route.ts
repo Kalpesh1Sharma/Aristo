@@ -40,7 +40,8 @@ export async function POST(request: Request) {
       ...(result.diagnostic.providerCode ? { providerCode: result.diagnostic.providerCode } : {}),
       ...(result.diagnostic.providerType ? { providerType: result.diagnostic.providerType } : {}),
       ...(result.diagnostic.param ? { param: result.diagnostic.param } : {}),
-      ...(result.diagnostic.providerKeyword ? { providerKeyword: result.diagnostic.providerKeyword } : {})
+      ...(result.diagnostic.providerKeyword ? { providerKeyword: result.diagnostic.providerKeyword } : {}),
+      ...(result.diagnostic.providerFailureStage ? { providerFailureStage: result.diagnostic.providerFailureStage } : {})
     });
     if (process.env.NODE_ENV !== "development" && "diagnostic" in result) {
       const safeResult = Object.fromEntries(Object.entries(result).filter(([key]) => key !== "diagnostic"));
