@@ -1,0 +1,62 @@
+Implement Phase 3 of MarginGhost: an honest, reproducible adversarial evaluation dashboard for neatHack 2026.
+
+CURRENT BASELINE:
+- Next.js 16.4.0 TypeScript project.
+- 42/42 automated tests pass in Windows.
+- Real local PDF + Groq investigation works.
+- Deterministic Challenge → Verify → Decide self-audit is implemented.
+- Evidence-backed reports can be printed to PDF.
+- Public processing APIs remain disabled with HTTP 403.
+
+OBJECTIVE:
+Build a polished, judge-friendly /evaluation page that demonstrates MarginGhost's reliability under adversarial conditions using reproducible deterministic checks.
+
+REQUIREMENTS:
+
+1. Inspect the existing audit engine, investigation pipeline, tests, demo fixtures, report model, and frontend structure before making changes.
+
+2. Reuse existing deterministic fixtures wherever possible. Add only necessary new fixtures and assertions.
+
+3. Evaluate these cases when supported by the available schemas:
+   - Genuine invoice overcharge
+   - Correctly priced invoice
+   - Contract amendment conflicts with purchase order
+   - Valid amendment and revised PO eliminate the discrepancy
+   - Unsupported source quotation
+   - Supplier or document identity mismatch
+   - Contract outside effective dates
+   - Missing or malformed PO contract reference
+
+4. For each case, provide:
+   - Scenario name
+   - Input condition
+   - Expected disposition
+   - Actual disposition
+   - Pass/fail result
+   - Concise explanation
+   - Test or fixture provenance
+
+5. Make evaluation results reproducible from version-controlled fixtures or tests. Prefer a small deterministic evaluation runner that can be executed with an npm command.
+
+6. Generate a machine-readable evaluation artifact in JSON. If committing a static snapshot for the public site, include generation instructions and source revision metadata. Do not label a snapshot as live.
+
+7. The public /evaluation route must be read-only. Never expose APIs that accept arbitrary user input or trigger paid LLM inference.
+
+8. Clearly distinguish deterministic safety/regression tests from real LLM accuracy benchmarking. Do not invent precision, recall, accuracy, hallucination rates, or other statistics.
+
+9. Show genuine pass/fail outcomes. Do not hardcode all scenarios as passing or hide failures.
+
+10. Include an overall summary derived from actual executed scenarios, with clear labels such as "Adversarial scenarios passed" and "Unsupported claims safely withheld."
+
+11. Keep the UI consistent with MarginGhost's existing editorial fintech styling. Provide a clear route link in the main navigation.
+
+12. Preserve the local live investigation, printable report, production 403 guards, neatlogs integration, Entire hooks, and all existing features.
+
+13. Do not modify .env, API keys, dependency versions, or unrelated configuration.
+
+14. Do not commit, push, or deploy.
+
+15. Run TypeScript and ESLint. If tests cannot run in WSL due to the existing native esbuild platform mismatch, explain that and leave Windows verification to me.
+
+IMPORTANT:
+Implement the smallest truthful, independently verifiable evaluation system. Do not create a decorative dashboard that pretends to benchmark an LLM.
