@@ -1,0 +1,242 @@
+Redesign the entire MarginGhost frontend into one cohesive premium financial-intelligence interface with fully functional Light and Dark modes.
+
+PROJECT
+- Next.js 16.4, React, TypeScript
+- Repository: D:\Aristo
+- Current design branch: ui-redesign
+- Existing redesigned homepage uses mg-home classes in src/app/page.tsx and src/app/globals.css.
+- The homepage currently uses a dark emerald aesthetic.
+- Investigation, synthetic demo, evaluation, and Judge Preview pages still use the older light theme.
+
+OBJECTIVE
+
+Unify every frontend page under the same visual design language as the new dark homepage and MarginGhost launch poster.
+
+The application should feel like a premium financial investigation platform, with excellent readability, accessibility, and professional visual hierarchy.
+
+Do not sacrifice functionality for visual effects.
+
+DESIGN SYSTEM
+
+DARK THEME — DEFAULT
+Background: #08120E
+Card surfaces: #101C18 / #15241E
+Primary text: #F5F7F2
+Secondary text: #A2B2A9
+Accent: #B5F0BD
+Emerald: #184F3B
+Borders: subtle green-gray
+
+LIGHT THEME
+Background: #F7F8F4
+Card surfaces: #FFFFFF
+Primary text: #20342B
+Secondary text: #61736A
+Accent: #184F3B
+Borders: #D8E1D9
+
+Use design tokens through CSS variables. Avoid duplicating entire stylesheets for each theme.
+
+THEME SWITCHER
+
+Implement a real global Light / Dark toggle.
+
+Requirements:
+- Dark mode by default for a first-time visitor.
+- User-selected preference persists through localStorage.
+- Apply the theme consistently across all application routes.
+- Avoid hydration mismatches or visible theme flashes.
+- Accessible toggle with descriptive labels and keyboard support.
+- Respect prefers-reduced-motion.
+- Make light mode equally polished and readable.
+- Do not introduce a large theme library unless necessary.
+- Ensure the toggle is present in the shared navigation.
+
+PAGES TO REDESIGN
+
+1. HOMEPAGE (/)
+
+Preserve the newly redesigned homepage.
+
+Refine its spacing, typography, responsive layout, and theme support.
+
+Keep the static synthetic ₹18,000 showcase.
+
+The hero should remain dramatic and premium.
+
+2. INVESTIGATION (/investigate)
+
+This is the primary product workspace.
+
+Redesign:
+- Header and navigation
+- Hero/intro section
+- Document upload cards
+- Contract, purchase-order, invoice and amendment sections
+- Document ID fields
+- PDF extraction indicators
+- Investigation progress/status panel
+- Loading and error states
+- Self-audit summary
+- Findings and source-evidence presentation
+- Printable report controls
+
+Use a professional control-room layout with sophisticated card surfaces and clear visual states.
+
+Keep dense financial evidence highly readable.
+
+3. SYNTHETIC DEMO (/demo)
+
+Redesign all three scenario cards:
+- Potential overcharge
+- Conflicting amendment
+- Revised purchase order
+
+Preserve exact dispositions and synthetic-only labeling.
+
+Improve scenario selection, financial comparison, evidence navigation, and result readability.
+
+Do not introduce real inference into synthetic demo mode.
+
+4. EVALUATION (/evaluation)
+
+Redesign the deterministic reliability dashboard.
+
+Prominently show:
+- Nine expected outcomes observed
+- Nine deterministic scenarios passed
+- Eight unsupported claims safely withheld
+
+Retain explicit language that these are deterministic regression cases, not an AI model accuracy benchmark.
+
+Improve scenario cards, PASS indicators, hierarchy, and information density.
+
+5. JUDGE PREVIEW (/judge-preview)
+
+Redesign:
+- Password entry screen
+- Unavailable/disabled state
+- Loading and error messages
+- Signed-in navigation
+- Logout controls
+
+Keep all authentication semantics unchanged.
+
+Do not expose environment variables, credentials, or debug data.
+
+6. REPORT AND PRINT
+
+Create a professional evidence-first report matching the new product identity.
+
+The in-browser report should respect the selected app theme.
+
+The printed PDF report must always use a crisp white background with dark text, regardless of application theme.
+
+Preserve:
+- Exact source citations
+- Financial calculations
+- SUPPORTED / NEEDS REVIEW / REJECTED distinctions
+- Five-check self-audit presentation
+- Human-review disclaimers
+- Current print functionality
+
+Avoid almost-empty trailing PDF pages where possible without hiding any information.
+
+SHARED COMPONENTS
+
+Refactor duplicated navigation and visual components where appropriate:
+- Logo
+- Navigation
+- Theme switch
+- Buttons
+- Cards
+- Status badges
+- Page headers
+- Empty states
+- Error states
+
+Make all screens feel like one application.
+
+RESPONSIVE DESIGN
+
+Test at:
+- 1440px desktop
+- 1024px laptop/tablet
+- 768px tablet
+- 390px mobile
+
+Ensure:
+- No horizontal overflow
+- Accessible buttons and inputs
+- Readable evidence citations
+- Usable document upload controls
+- Consistent navigation
+
+SECURITY AND FUNCTIONAL REQUIREMENTS
+
+Do not change:
+- PDF extraction implementation
+- Groq inference behavior
+- Upstash Redis quotas
+- Judge Preview authentication
+- Session cookies
+- CSRF protections
+- Bounded request bodies
+- Production API guards
+- Evidence verification rules
+- Deterministic arithmetic
+- neatlogs instrumentation
+- Entire integration
+- Existing API contracts
+
+The redesign is PRESENTATION ONLY.
+
+Never expose live PDF upload forms to unauthorized production users.
+
+Do not fabricate AI findings or replace functional workflows with mock interfaces.
+
+TEST COVERAGE
+
+Update tests/routes.test.ts to reflect the redesigned homepage.
+
+The old assertion expects:
+"Find invoice discrepancies"
+
+Replace it with assertions for:
+- "Know what every invoice should cost."
+- Public synthetic demo link
+- Evaluation link
+- Restricted live investigation messaging
+
+Add useful tests for theme functionality and shared navigation.
+
+Do not weaken existing security tests or remove legitimate assertions.
+
+WORKFLOW
+
+First inspect the existing layout, global CSS, pages, and home-client component.
+
+Provide a concise implementation plan identifying the shared theme system and route dependencies.
+
+Then implement the redesign in manageable phases:
+A. Global theme tokens and shared navigation
+B. Investigation workspace
+C. Synthetic demo
+D. Evaluation
+E. Judge Preview
+F. Report and print CSS
+G. Responsive and accessibility polish
+
+Run:
+npm run typecheck
+npm test
+npm run lint
+npm run build
+
+If Linux dependencies prevent test/build execution, report that and leave complete verification for Windows.
+
+Do not modify .env.
+Do not commit, push, merge, or deploy.
+Do not touch unrelated local files.
+
+Report changed files, completed screens, known limitations, and verification results.

@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4PHVZ3GECT6DWACN9QHVZAY",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "next-env.d.ts",
+    "src/app/evaluation/page.tsx",
+    "src/app/globals.css",
+    "src/app/home-client.tsx",
+    "src/app/judge-preview/judge-preview-client.tsx",
+    "src/app/layout.tsx",
+    "src/app/navigation.tsx",
+    "src/app/page.tsx",
+    "src/app/theme-switch.tsx",
+    "tests/routes.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 98596,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1653760,
+    "output_tokens": 13316,
+    "api_call_count": 28,
+    "subagent_tokens_complete": true
+  }
+}
