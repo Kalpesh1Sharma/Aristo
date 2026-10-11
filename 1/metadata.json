@@ -1,0 +1,72 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4N7Q0A6E40TS11Z3SZ3J7ZC",
+  "session_id": "01a12a71-14c8-7fd2-9c18-0c7f5ee9ef28",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T10:21:57.196096437Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "src/lib/evaluation.ts",
+    "tests/routes.test.ts"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-luna",
+  "turn_id": "d0ecf3668296",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 12614,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 100864,
+    "output_tokens": 2660,
+    "api_call_count": 6,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T10:21:57.065629077Z",
+    "agent_lines": 15,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 15,
+    "total_lines_changed": 15,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 323,
+      "user_lines_removed": 13,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        "README.md": 6,
+        "next-env.d.ts": 2,
+        "package.json": 1,
+        "scripts/evaluate.ts": 22,
+        "src/app/evaluation/page.tsx": 18,
+        "src/app/globals.css": 22,
+        "src/app/home-client.tsx": 2,
+        "src/app/page.tsx": 1,
+        "src/lib/evaluation-snapshot.json": 114,
+        "src/lib/evaluation.ts": 47,
+        "test-invoice.pdf": 68,
+        "tests/routes.test.ts": 13
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        "next-env.d.ts": 2,
+        "package.json": 1,
+        "src/app/home-client.tsx": 2,
+        "src/app/page.tsx": 1
+      }
+    }
+  ]
+}
