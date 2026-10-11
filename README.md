@@ -52,6 +52,12 @@ npm run build
 
 Tests cover deterministic audit behavior, cited evidence validation, all three synthetic fixture outcomes, and direct HTTP requests to demo-disabled endpoints.
 
+### Deterministic adversarial evaluation
+
+Open `/evaluation` for a read-only replay of fixed adversarial fixtures through the same evidence verification and deterministic decision pipeline used by investigations. The route executes local fixture extraction only: it does not accept user input, call a model provider, or use paid inference. Its pass/fail summary compares actual dispositions with scenario expectations; it is a deterministic regression check, not an LLM accuracy benchmark.
+
+Run `npm run evaluate` to reproduce the scenarios and write `src/lib/evaluation-snapshot.json`. The generated JSON includes its generation time, the repository revision at generation, and each actual/expected outcome with test provenance. Rerun the command after changing fixtures or decision logic. The generated file is an artifact and is not consumed as live dashboard data.
+
 ## Privacy and limitations
 
 Public demo mode does not ingest supplied PDFs or call any AI provider. In local document mode, PDFs and extracted text remain in the active browser session until submitted to the local app API; there is no authentication or persistent case storage. One supplier, one currency (INR), and one purchase order per case are supported. Tax/freight allocation, OCR, cross-case invoice deduplication, authentication, case persistence, and supplier communications are outside this milestone.

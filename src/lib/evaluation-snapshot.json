@@ -1,0 +1,114 @@
+{
+  "evaluationType": "deterministic regression evaluation",
+  "generatedAt": "2026-10-11T13:47:38.163Z",
+  "sourceRevision": "e799b6d687bd0c2ea05f11f12099c230aa581a72",
+  "workingTreeDirty": true,
+  "sourceRevisionNote": "sourceRevision is HEAD at generation; workingTreeDirty records whether uncommitted changes were included. Rerun npm run evaluate after changes.",
+  "summary": {
+    "scenarios": 9,
+    "passed": 9,
+    "failed": 0,
+    "unsupportedClaimsSafelyWithheld": 8
+  },
+  "scenarios": [
+    {
+      "id": "overcharge",
+      "name": "Genuine invoice overcharge",
+      "condition": "Invoice ₹120/unit; contract and PO ₹100/unit; quantity 10.",
+      "expected": "supported",
+      "actual": "supported",
+      "passed": true,
+      "explanation": "The deterministic comparison supports a potential overcharge finding. A human must review the cited evidence; this is not an approved payment claim.",
+      "provenance": "tests/investigation.test.ts · genuine overcharge",
+      "unsupported": false
+    },
+    {
+      "id": "correct",
+      "name": "Correctly priced invoice",
+      "condition": "Invoice, contract, and PO all price SKU-X at ₹100/unit.",
+      "expected": "rejected",
+      "actual": "rejected",
+      "passed": true,
+      "explanation": "The checked evidence does not support the proposed overcharge hypothesis.",
+      "provenance": "tests/investigation.test.ts · clean invoice",
+      "unsupported": true
+    },
+    {
+      "id": "amendment-conflict",
+      "name": "Amendment conflicts with PO",
+      "condition": "Amendment says ₹115; PO remains ₹110; invoice says ₹120.",
+      "expected": "needs_review",
+      "actual": "needs_review",
+      "passed": true,
+      "explanation": "The investigation found an unresolved check. No verified zero or approved claim is reported.",
+      "provenance": "tests/investigation.test.ts · conflicting amendment and PO pricing",
+      "unsupported": true
+    },
+    {
+      "id": "revised-po",
+      "name": "Valid amendment and revised PO",
+      "condition": "Amendment and revised PO agree at ₹110; invoice is ₹110.",
+      "expected": "rejected",
+      "actual": "rejected",
+      "passed": true,
+      "explanation": "The checked evidence does not support the proposed overcharge hypothesis.",
+      "provenance": "tests/investigation.test.ts · valid newer amendment supersedes old price",
+      "unsupported": true
+    },
+    {
+      "id": "unsupported-quote",
+      "name": "Unsupported source quotation",
+      "condition": "Contract price citation is replaced with text absent from its page.",
+      "expected": "needs_review",
+      "actual": "needs_review",
+      "passed": true,
+      "explanation": "The investigation stopped before the financial comparison could support or reject the overcharge hypothesis.",
+      "provenance": "tests/investigation.test.ts · unsupported quotes and invalid model response",
+      "unsupported": true
+    },
+    {
+      "id": "identity",
+      "name": "Supplier identity mismatch",
+      "condition": "Invoice supplier ID differs from the contract and PO.",
+      "expected": "needs_review",
+      "actual": "needs_review",
+      "passed": true,
+      "explanation": "The investigation stopped before the financial comparison could support or reject the overcharge hypothesis.",
+      "provenance": "tests/investigation.test.ts · supplier identity change",
+      "unsupported": true
+    },
+    {
+      "id": "date",
+      "name": "Contract outside effective dates",
+      "condition": "Contract begins after the invoice date.",
+      "expected": "needs_review",
+      "actual": "needs_review",
+      "passed": true,
+      "explanation": "The investigation found an unresolved check. No verified zero or approved claim is reported.",
+      "provenance": "tests/investigation.test.ts · contract effective date mismatch",
+      "unsupported": true
+    },
+    {
+      "id": "po-reference",
+      "name": "Missing PO contract reference",
+      "condition": "PO contractId citation is absent.",
+      "expected": "needs_review",
+      "actual": "needs_review",
+      "passed": true,
+      "explanation": "The investigation stopped before the financial comparison could support or reject the overcharge hypothesis.",
+      "provenance": "tests/investigation.test.ts · PO contractId structural validation",
+      "unsupported": true
+    },
+    {
+      "id": "po-reference-malformed",
+      "name": "Malformed PO contract reference",
+      "condition": "PO contractId is a bare string without source citation fields.",
+      "expected": "needs_review",
+      "actual": "needs_review",
+      "passed": true,
+      "explanation": "The investigation stopped before the financial comparison could support or reject the overcharge hypothesis.",
+      "provenance": "tests/investigation.test.ts · PO contractId structural validation",
+      "unsupported": true
+    }
+  ]
+}
