@@ -1,0 +1,163 @@
+Redesign the MarginGhost homepage to match our premium dark financial-intelligence launch poster.
+
+PROJECT
+- Next.js 16.4, TypeScript, React
+- Repository: D:\Aristo
+- Product: MarginGhost
+- Existing public site: https://aristo-topaz.vercel.app/
+- The product is an evidence-first AI agent that compares contracts, purchase orders, and supplier invoices to identify potential overcharges.
+
+OBJECTIVE
+
+Make the homepage look like a premium, professionally designed AI financial-intelligence startup.
+
+The reference aesthetic is:
+- Near-black and deep emerald backgrounds
+- Muted mint-green highlights
+- Large editorial typography
+- Sophisticated gradients and atmospheric depth
+- Realistic financial intelligence panels
+- Restrained animations and precise spacing
+- High visual quality without a generic AI-generated or vibecoded look
+
+IMPORTANT: Keep the existing product working. This is a visual redesign, not a rewrite.
+
+DESIGN SYSTEM
+
+Suggested palette:
+Background: #080F0D
+Elevated surface: #101C18
+Card surface: #15241E
+Primary mint: #B5F0BD
+Dark emerald: #184F3B
+Text: #F5F7F2
+Secondary text: #A2B2A9
+Borders: rgba(181,240,189,0.14)
+
+Use color intentionally. Avoid neon overload, excessive blur, random gradients, glowing borders on every component, and generic Tailwind-blue styling.
+
+HOMEPAGE STRUCTURE
+
+1. NAVIGATION
+
+Create a refined dark navigation bar featuring:
+- MarginGhost logo and wordmark
+- Overview
+- Investigate
+- Synthetic demo
+- Evaluation
+- Clear primary CTA
+
+Maintain existing navigation behavior and access controls.
+
+2. HERO
+
+Use this headline:
+
+"Know what every invoice should cost."
+
+Make it large, typographic, and memorable.
+
+Highlight "should cost." using a subtle mint treatment.
+
+Subheading:
+
+"An evidence-first AI agent that investigates supplier invoices against contracts and purchase orders — exposing potential overcharges with verifiable source evidence."
+
+Primary CTA:
+"Explore the demo"
+
+Secondary CTA:
+"How it works"
+
+Do not imply that public visitors can upload PDFs. Live processing remains restricted to authorized Judge Preview sessions.
+
+3. PRODUCT SHOWCASE
+
+Build a sophisticated interactive-looking visual using actual product concepts.
+
+Display three connected document cards:
+- Contract
+- Purchase order
+- Invoice
+
+Then show an investigation finding:
+
+Potential overcharge: ₹18,000
+Contract: ₹480/unit
+Invoice: ₹525/unit
+Quantity: 400
+Self-audit: 5/5 checks passed
+Disposition: SUPPORTED
+
+Explicitly identify this as a synthetic sample case.
+
+Use real existing fixture data or static presentation components. Do not fabricate fresh investigation results or make backend requests merely to animate the hero.
+
+4. HOW IT WORKS
+
+Three clear stages:
+
+01 — Ingest
+Upload contract, purchase order and invoice PDFs.
+
+02 — Investigate
+Match document identities, pricing, validity dates and amendments.
+
+03 — Verify
+Challenge candidate findings, validate citations and calculate discrepancies deterministically.
+
+5. TRUST AND EVIDENCE
+
+Feature:
+- Exact source citations
+- Deterministic financial arithmetic
+- Amendment-aware verification
+- Human review before action
+- Nine deterministic adversarial regression scenarios
+
+Do not present 9/9 as model accuracy.
+
+6. FINAL CTA
+
+Headline:
+
+"Every invoice tells a story. Know the real cost."
+
+Buttons:
+"Try synthetic demo"
+"Explore reliability"
+
+IMPLEMENTATION REQUIREMENTS
+
+- Inspect existing app/page.tsx, home-client.tsx, styling, navigation and shared components before coding.
+- Preserve all existing routes, APIs, authentication, Judge Preview restrictions, Groq integration, PDF extraction, evidence verification, neatlogs tracing, and report functionality.
+- Keep the homepage public and functional when DEMO_MODE=true in production.
+- Use responsive layouts for desktop, tablet and mobile.
+- Ensure WCAG-conscious contrast and keyboard navigation.
+- Use tasteful hover transitions and subtle entrance animations.
+- Honor prefers-reduced-motion.
+- Avoid unnecessary dependencies and heavyweight animation libraries.
+- Do not introduce remote image dependencies or new external APIs.
+- Reuse the existing typography and design components where suitable.
+- Keep Investigation, Evaluation, Demo and report pages unchanged during this phase.
+- Avoid showing confidential information or exposing credentials.
+
+WORKFLOW
+
+First inspect the existing frontend and explain the proposed changes.
+
+Then implement the homepage redesign only.
+
+Run:
+npm run typecheck
+npm test
+npm run lint
+npm run build
+
+If Linux dependencies prevent tests or build, report the limitation and leave full verification for Windows PowerShell.
+
+Do not modify .env.
+Do not commit, push, or deploy.
+
+At the end, summarize the files modified and any issues requiring review.
