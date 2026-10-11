@@ -10,7 +10,8 @@ import { SelfAuditSection } from "../src/app/home-client";
 
 test("homepage presents product value and links to both workflows", () => {
   const html = renderToStaticMarkup(createElement(Home));
-  assert.match(html, /Find invoice discrepancies/);
+  assert.match(html, /Know what every invoice <em>should cost\.<\/em>/);
+  assert.match(html, /Live processing is restricted to authorized Judge Preview sessions/);
   assert.match(html, /href="\/investigate"/);
   assert.match(html, /href="\/demo"/);
   assert.match(html, /href="\/evaluation"/);
@@ -64,11 +65,21 @@ test("evaluation route executes fixed scenarios and labels deterministic scope",
   const html = renderToStaticMarkup(await EvaluationPage());
   assert.match(html, /Reliability under adversarial conditions/);
   assert.match(html, /DETERMINISTIC REGRESSION/);
-  assert.match(html, /ADVERSARIAL SCENARIOS PASSED/);
+  assert.match(html, /DETERMINISTIC SCENARIOS PASSED/);
+  assert.match(html, /9 expected outcomes observed/);
   assert.match(html, /Genuine invoice overcharge/);
   assert.match(html, /Unsupported source quotation/);
   assert.match(html, /not an LLM benchmark/);
   assert.doesNotMatch(html, /href="\/api\//);
+});
+
+test("shared navigation exposes the four public routes and an accessible theme switch", async () => {
+  const { default: Navigation } = await import("../src/app/navigation");
+  const html = renderToStaticMarkup(createElement(Navigation, { current: "demo" }));
+  assert.match(html, /aria-label="Main navigation"/);
+  assert.match(html, /href="\/demo"/);
+  assert.match(html, /href="\/evaluation"/);
+  assert.match(html, /aria-label="Switch to light mode"/);
 });
 
 test("self-audit presentation labels supported, review, and rejected dispositions with evidence context", () => {

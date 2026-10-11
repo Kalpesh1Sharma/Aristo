@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
-import Link from "next/link";
-import JudgeLogoutButton from "./judge-preview/logout-button";
 import { buildCaseEvaluation, buildReportModel } from "../lib/report-model";
+import Navigation from "./navigation";
 
 type Kind = "contract" | "purchase_order" | "invoice" | "amendment";
 type Doc = { key: string; kind: Kind; file: File; id: string; pages?: { page: number; text: string }[]; progress: number; error?: string };
@@ -71,7 +70,7 @@ export default function HomeClient({ demoMode, liveDisabled = false, judgePrevie
   };
 
   if (demoMode) return <main className="shell">
-    <header className="topbar"><Link className="brand" href="/" aria-label="MarginGhost home"><span className="brand-icon">M</span><span>MarginGhost <small>V0.4</small></span></Link><nav className="main-nav" aria-label="Main navigation"><Link href="/">Overview</Link><a href="/investigate">Investigate</a><a href="/demo">Synthetic demo</a><Link href="/evaluation">Evaluation</Link>{result && <a href="#results">Replay results</a>}</nav><span className="mode-pill"><i/> Synthetic demo</span></header>
+    <Navigation current="demo" result={!!result} />
     <section className="intro hero" id="top"><div className="eyebrow"><span className="dot"/> FINANCIAL CONTROL · INR</div><h1>Know what every invoice should cost.</h1><p>Compare supplier invoices with the contract and purchase order. Follow every discrepancy back to its source page.</p><a className="primary-button hero-action" href="#scenarios">Explore the scenarios <span aria-hidden="true">↓</span></a><div className="hero-note">A synthetic replay environment <span>·</span> No live model inference or PDF upload</div></section>
     <section className="demo-section" id="scenarios"><div className="section-heading"><div><div className="step">SYNTHETIC SCENARIO REPLAY</div><h2>Three ways to examine a case</h2></div><p>Choose a fixed example to inspect its outcome and source evidence.</p></div><div className="scenario-grid">
       <button aria-pressed={result?.case?.totalPotentialOvercharge === 18000} className={`scenario-card scenario-recovery ${result?.case?.totalPotentialOvercharge === 18000 ? "selected" : ""}`} onClick={() => replay("overcharge")}><span className="scenario-index">01 / PRICE VARIANCE</span><strong>₹18,000</strong><span className="scenario-title">Potential overcharge</span><span className="scenario-copy">Invoice exceeds the contract and PO by ₹45 across 400 units.</span><span className="scenario-link">Review case <b>↗</b></span></button>
@@ -178,7 +177,7 @@ export default function HomeClient({ demoMode, liveDisabled = false, judgePrevie
   const formatSize = (bytes: number) => bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
   return <main className="shell">
-    <header className="topbar"><Link className="brand" href="/" aria-label="MarginGhost home"><span className="brand-icon">M</span><span>MarginGhost <small>V0.4</small></span></Link><nav className="main-nav" aria-label="Main navigation"><Link href="/">Overview</Link><a href="/investigate">Investigate</a><a href="/demo">Synthetic demo</a><Link href="/evaluation">Evaluation</Link>{result && <a href="#results">Results</a>}</nav>{judgePreview && <JudgeLogoutButton />}<span className="mode-pill local-pill"><i/> Investigation workspace</span></header>
+    <Navigation current="investigate" result={!!result} signedIn={judgePreview} />
     {liveDisabled && <div className="deployment-note" role="status"><strong>Live AI investigation requires authorized access.</strong> Live extraction and investigation are disabled in this deployment. Your PDFs are not sent for processing here; use the synthetic demo to explore sample evidence.</div>}
     <section className="intro hero" id="top"><div className="eyebrow"><span className="dot"/> FINANCIAL CONTROL · INR</div><h1>Know what every invoice should cost.</h1><p>Compare supplier invoices with the contract and purchase order. Follow every discrepancy back to its source page.</p><a className="primary-button hero-action" href="#investigation">Start an investigation <span aria-hidden="true">↓</span></a><div className="hero-note">Evidence-led review <span>·</span> Human decision, always</div></section>
     <div className="workspace">
