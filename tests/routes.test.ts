@@ -16,18 +16,39 @@ test("homepage presents product value and links to both workflows", () => {
   assert.match(html, /href="\/evaluation"/);
 });
 
-test("investigation route retains the PDF workspace and shared route navigation", () => {
+test("production investigation route shows the closed preview state without rendering a live form", async () => {
   const env = process.env as Record<string, string | undefined>;
   const previousNodeEnv = env.NODE_ENV;
+  const previousPreview = env.JUDGE_PREVIEW_ENABLED;
   env.NODE_ENV = "production";
   let html: string;
-  try { html = renderToStaticMarkup(createElement(InvestigatePage)); }
-  finally { if (previousNodeEnv === undefined) delete env.NODE_ENV; else env.NODE_ENV = previousNodeEnv; }
-  assert.match(html, /Build an investigation/);
-  assert.match(html, /printed ID inside each document/);
+  env.JUDGE_PREVIEW_ENABLED = "false";
+  try { html = renderToStaticMarkup(await InvestigatePage()); }
+  finally {
+    if (previousNodeEnv === undefined) delete env.NODE_ENV; else env.NODE_ENV = previousNodeEnv;
+    if (previousPreview === undefined) delete env.JUDGE_PREVIEW_ENABLED; else env.JUDGE_PREVIEW_ENABLED = previousPreview;
+  }
+  assert.match(html, /Preview access is unavailable/);
   assert.match(html, /href="\/demo"/);
-  assert.match(html, /Live AI investigation requires authorized access/);
-  assert.match(html, /disabled/);
+  assert.doesNotMatch(html, /Build an investigation/);
+  assert.doesNotMatch(html, /type="file"/);
+});
+
+test("local investigation route renders the existing document workspace", async () => {
+  const env = process.env as Record<string, string | undefined>;
+  const previousNodeEnv = env.NODE_ENV;
+  const previousDemoMode = env.DEMO_MODE;
+  env.NODE_ENV = "development";
+  env.DEMO_MODE = "false";
+  try {
+    const html = renderToStaticMarkup(await InvestigatePage());
+    assert.match(html, /Build an investigation/);
+    assert.match(html, /printed ID inside each document/);
+    assert.match(html, /href="\/demo"/);
+  } finally {
+    if (previousNodeEnv === undefined) delete env.NODE_ENV; else env.NODE_ENV = previousNodeEnv;
+    if (previousDemoMode === undefined) delete env.DEMO_MODE; else env.DEMO_MODE = previousDemoMode;
+  }
 });
 
 test("demo route presents the synthetic scenarios and evidence notice", () => {
