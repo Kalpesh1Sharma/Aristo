@@ -1,0 +1,159 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4P6S1DFG1CM28XCTKRQPGD6",
+  "session_id": "01a12b56-f597-7a82-ae6b-53ebca8f4ebe",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T19:24:34.225439805Z",
+  "branch": "main",
+  "checkpoints_count": 7,
+  "save_step_count": 7,
+  "files_touched": [
+    ".env.example",
+    "README.md",
+    "next-env.d.ts",
+    "next.config.ts",
+    "scripts/create-judge-password-verifier.mjs",
+    "src/app/api/audit/route.ts",
+    "src/app/api/ingest/pdf/route.ts",
+    "src/app/api/investigate/route.ts",
+    "src/app/api/judge-preview/login/route.ts",
+    "src/app/api/judge-preview/logout/route.ts",
+    "src/app/api/judge-preview/session/route.ts",
+    "src/app/home-client.tsx",
+    "src/app/investigate/page.tsx",
+    "src/app/judge-preview/judge-preview-client.tsx",
+    "src/app/judge-preview/logout-button.tsx",
+    "src/app/judge-preview/page.tsx",
+    "src/app/page.tsx",
+    "src/lib/bounded-request-body.ts",
+    "src/lib/demo-mode.ts",
+    "src/lib/judge-preview.ts",
+    "src/lib/pdf-ingestion.ts",
+    "tests/judge-preview.test.ts",
+    "tests/pdf-ingestion.test.ts",
+    "tests/routes.test.ts"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-luna",
+  "turn_id": "689a9bf00fe8",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 531892,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 21721344,
+    "output_tokens": 125087,
+    "api_call_count": 252,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T19:24:33.744660325Z",
+    "agent_lines": 731,
+    "agent_removed": 67,
+    "human_added": 0,
+    "human_modified": 2,
+    "human_removed": 2,
+    "total_committed": 731,
+    "total_lines_changed": 802,
+    "agent_percentage": 99.50124688279301,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 77,
+      "user_lines_removed": 9,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7,
+        "next-env.d.ts": 2,
+        "test-invoice.pdf": 68
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7,
+        "next-env.d.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 7,
+      "user_lines_removed": 7,
+      "agent_lines_added": 70,
+      "agent_lines_removed": 2,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 7,
+      "user_lines_removed": 7,
+      "agent_lines_added": 491,
+      "agent_lines_removed": 38,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 7,
+      "user_lines_removed": 7,
+      "agent_lines_added": 643,
+      "agent_lines_removed": 50,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 7,
+      "user_lines_removed": 7,
+      "agent_lines_added": 657,
+      "agent_lines_removed": 50,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 7,
+      "user_lines_removed": 7,
+      "agent_lines_added": 199,
+      "agent_lines_removed": 22,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7
+      }
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 7,
+      "user_lines_removed": 7,
+      "agent_lines_added": 217,
+      "agent_lines_removed": 24,
+      "user_added_per_file": {
+        ".codex/hooks.json": 7
+      },
+      "user_removed_per_file": {
+        ".codex/hooks.json": 7
+      }
+    }
+  ]
+}

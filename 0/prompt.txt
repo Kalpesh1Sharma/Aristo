@@ -1,0 +1,267 @@
+Implement a secure, invite-only Judge Preview for MarginGhost on Vercel.
+
+PROJECT CONTEXT
+- Next.js 16.4.0, TypeScript.
+- Public homepage, /demo, and /evaluation are working.
+- Local Groq-powered PDF investigations work.
+- Live Case Evaluation shows five real self-audit checks for the synthetic ₹18,000 scenario.
+- Production processing APIs currently return HTTP 403 intentionally.
+- Existing tracing, evidence verification, reports, and deterministic financial calculations must be preserved.
+
+GOAL
+Allow invited neatHack judges to securely run real PDF investigations on Vercel, while keeping the public demo open and avoiding uncontrolled inference usage.
+
+IMPLEMENTATION REQUIREMENTS
+
+1. Inspect all existing production API guards, demo-mode logic, PDF ingestion, Groq configuration, logging, and deployment assumptions first.
+
+2. Design a separate server-validated judge-preview access mechanism. Do not authenticate by checking a password solely in client-side JavaScript.
+
+3. Protect every processing endpoint, including /api/ingest/pdf, /api/investigate, and /api/audit. Do not permit direct API calls to bypass authentication.
+
+4. Use a server-side, HTTP-only, Secure cookie with SameSite protection, a short expiration, and an authenticated session. Avoid placing the preview password in query parameters, browser storage, or logs.
+
+5. Store only a strong password verifier or equivalent authentication secret in Vercel server environment variables. Never commit secrets.
+
+6. Enforce a global persistent investigation quota and per-client limits, preferably using an existing supported external rate-limit store. Reserve quota atomically before performing paid or free provider inference. Do not depend on in-memory counters.
+
+7. If authentication, the persistent quota store, or required configuration is missing or unavailable, reject processing. Never silently fall back to unrestricted access.
+
+8. Include limits on PDF size, page count, document count, and request payload size. Preserve the existing limits where stricter.
+
+9. Add explicit warnings not to upload confidential or real customer financial information. This is a hackathon preview, not a production financial-data service.
+
+10. Do not persist uploaded PDFs, extracted document text, or model responses to databases, logs, analytics, or tracing unless explicitly necessary and approved. Check existing neatlogs instrumentation for sensitive-data capture.
+
+11. Maintain LLM_PAID_FALLBACK=false and a fixed Groq endpoint/model allowlist. Do not add automatic retries that increase inference usage.
+
+12. Preserve the existing self-audit, citation verification, report generation, and zero-claim fail-closed behavior.
+
+13. Leave /, /demo, and /evaluation publicly accessible.
+
+14. Add a clear judge-preview sign-in experience and logout mechanism. Do not make the existing public investigation form appear functional when preview access is unavailable.
+
+15. Create automated tests for unauthorized requests, authenticated requests, cookie/session security, direct endpoint bypass, invalid PDFs, quota exhaustion, absent configuration, and quota store failure.
+
+16. Add deployment documentation describing the required environment variables, how to provision the quota store, how to set a strong password, and how to disable the preview immediately.
+
+17. Work in two phases:
+   A. First provide a concise security and deployment plan after inspecting the code. Identify any additional service or dependency required.
+   B. Implement only after the plan is reviewed and approved.
+
+18. Do not modify .env, add actual credentials, commit, push, or deploy.
+
+19. Run typecheck and lint. Leave Windows test/build verification to me.
+
+PRIORITY
+Security and predictable cost matter more than convenience. Never remove the existing production HTTP 403 safeguards until the replacement protections have been implemented and tested.
+
+---
+
+Phase A is approved. Proceed with Phase B implementation, subject to these additional requirements:
+
+1. Keep JUDGE_PREVIEW_ENABLED=false by default. Missing or invalid preview configuration must preserve the existing production HTTP 403 behavior.
+
+2. Implement persistent, atomic login-attempt limits in addition to investigation quotas, to protect against password guessing.
+
+3. Separate rate limits for authentication, PDF ingestion, and Groq investigations. Uploading three PDFs as part of one case must not consume three investigation credits.
+
+4. Use server-side session verification with signed, HTTP-only, Secure, SameSite cookies, an expiration, and logout. Prevent cross-site request forgery on authenticated processing requests using appropriate origin and session protections.
+
+5. Enforce strict maximum request sizes, document counts, PDF pages, and upload limits before costly parsing or provider calls.
+
+6. Keep existing production protections active until all new checks are complete. Public /, /demo, and /evaluation must remain accessible.
+
+7. Ensure all rate-limit operations are atomic across serverless instances. Do not rely on process-local state. If Redis or any required security configuration fails, reject access.
+
+8. Use the existing fixed Groq endpoint/model, with paid fallback disabled. No additional inference retries.
+
+9. Never expose or log passwords, tokens, API keys, raw PDFs, extracted document text, or model responses. Preserve sanitized diagnostics and privacy-safe tracing.
+
+10. Do not modify the existing local .env or include credentials in code. Add only placeholder entries to .env.example.
+
+11. Add regression tests covering authentication, quota exhaustion, failed storage operations, session expiry, direct API bypass, disabled preview, and normal public demo operation.
+
+12. Keep the implementation modular and avoid unnecessary changes to the financial audit engine, existing investigation logic, or UI styling.
+
+13. Run typecheck and lint. Leave the full Windows test suite and production build to me.
+
+14. Do not commit, push, or deploy. Report every new environment variable and the exact steps required to set up the persistent quota store.
+
+15. Do not enable public live processing until we have independently tested the deployment protections.
+
+Proceed with implementation now.
+
+---
+
+Perform a focused hardening pass on the MarginGhost Judge Preview implementation.
+
+An external review of these files identified issues that must be resolved before deployment:
+- src/lib/judge-preview.ts
+- src/app/api/judge-preview/login/route.ts
+- src/app/api/judge-preview/logout/route.ts
+- src/app/api/investigate/route.ts
+- src/app/api/ingest/pdf/route.ts
+- src/app/home-client.tsx
+
+Current verification: 53/55 tests pass; typecheck, lint, and build pass.
+
+Tasks:
+
+1. Replace Content-Length-only validation with actual bounded request-body reading for JSON and multipart uploads. Reject oversized requests before unbounded parsing or expensive processing. Preserve existing limits.
+
+2. Inspect src/lib/demo-mode.ts and verify the interaction among NODE_ENV, DEMO_MODE, JUDGE_PREVIEW_ENABLED, authentication, and production processing guards. Ensure an enabled authorized judge can investigate while unauthorized production requests remain blocked.
+
+3. Fix tests/routes.test.ts:
+   - The demo route fails because HomeClient calls useRouter without a mounted Next.js router.
+   - The investigation route fails because synchronous static rendering encounters an asynchronous/suspending component.
+   - Preserve meaningful coverage; do not delete or skip the tests.
+   - Prefer isolating judge-only router behavior in a dedicated component or using the appropriate router-aware test strategy.
+
+4. Review client identification and avoid trusting spoofable forwarded headers. Preserve strict global and per-client limits.
+
+5. Verify that same-origin checks work with the intended Vercel deployment and do not weaken CSRF protection.
+
+6. Check the session-status endpoint, judge-preview page, and /api/audit for consistent authentication and quota guards.
+
+7. Add regression tests for oversized actual request bodies, missing/incorrect Content-Length, direct API bypass, disabled production preview, and relevant route rendering.
+
+8. Preserve all financial calculations, Groq configuration, self-audit logic, tracing privacy, and existing UI.
+
+9. Do not modify .env, commit, push, or deploy.
+
+10. Run typecheck and lint. Leave full Windows tests and build verification to me.
+
+Report confirmed vulnerabilities separately from deployment-dependent concerns, and list any code paths that remain unverified.
+
+---
+
+Fix the single remaining failing MarginGhost test.
+
+Current verification:
+- 59 tests
+- 58 passed
+- 1 failed
+- Typecheck, lint, and production build passed
+
+Failing test:
+tests/judge-preview.test.ts
+"investigation quota exhaustion and unavailable Redis fail closed on every processing endpoint"
+
+At approximately line 74, the test expects HTTP 429 but receives HTTP 400.
+
+The test currently sends:
+const body = { documents: [{}, {}, {}] };
+
+Investigation validation rejects this malformed document payload before Redis quota reservation.
+
+Requirements:
+
+1. Confirm the exact execution order in the CURRENT src/app/api/investigate/route.ts.
+2. Replace the malformed test fixture with the smallest structurally valid investigation payload, preferably reusing an existing synthetic fixture.
+3. Simulate Redis quota exhaustion and assert HTTP 429 before any Groq request occurs.
+4. Preserve rejection of malformed payloads with HTTP 400.
+5. Preserve Redis-failure protection on /api/investigate, /api/ingest/pdf, and /api/audit.
+6. Verify the bounded request reader is actually used by all applicable routes.
+7. Do not change production quota-check ordering merely to satisfy a test.
+8. Do not weaken security assertions, skip tests, or change the financial engine.
+9. Run npm run typecheck, npm test, npm run lint, and npm run build.
+10. Do not commit, push, deploy, or modify .env.
+
+Explain the exact cause and the smallest correction made.
+
+---
+
+Debug and fix MarginGhost PDF ingestion failing on the deployed Vercel Judge Preview.
+
+Context:
+- Judge Preview authentication works.
+- The three synthetic PDFs (contract.pdf, purchase-order.pdf, invoice.pdf) upload in the browser.
+- Vercel returns: "PDF could not be read. Check that the file is a readable, text based PDF."
+- These same PDFs previously worked locally.
+- 59/59 automated tests passed before deployment.
+- Production is unchanged; the failure is on the judge-preview branch.
+
+Tasks:
+
+1. Inspect src/app/api/ingest/pdf/route.ts, src/lib/pdf-ingestion.ts, src/lib/bounded-request-body.ts, and all associated Next.js configuration.
+2. Identify whether PDF.js initialization, worker loading, font assets, FormData reconstruction, or Vercel runtime packaging is causing the failure.
+3. Confirm that the PDF bytes remain identical after bounded multipart parsing.
+4. Add a regression test that exercises the actual ingestion route using a bundled synthetic PDF, not just invalid uploads.
+5. Use safe, structured error categories in development or server diagnostics without logging PDF bytes, extracted text, passwords, or other credentials.
+6. Fix the root cause while preserving authentication, CSRF protection, quotas, 10 MB PDF limits, and fail-closed behavior.
+7. Keep the PDF parser compatible with both Windows development and Vercel serverless runtime.
+8. Do not change the Groq provider, financial calculations, self-audit, or existing report generation.
+9. Run typecheck and lint. Leave full Windows tests and build to me.
+10. Do not modify .env, commit, push, or deploy.
+
+Report the root cause, exact files changed, new test coverage, and any Vercel-specific configuration needed.
+
+---
+
+Fix the remaining Windows regression failure and PDF.js bundling warnings in MarginGhost.
+
+Current environment:
+- Windows PowerShell, D:\Aristo
+- Branch: judge-preview
+- Next.js 16.4.0, Turbopack
+- 59/60 tests pass
+- Typecheck and lint pass
+- Production build succeeds with two pdfjs-dist externalization warnings
+
+Problems:
+
+1. tests/pdf-ingestion.test.ts:48 fails with:
+   TypeError: Body is unusable: Body has already been read
+
+2. The test output also contains:
+   [MarginGhost PDF ingestion] { category: 'pdf_ingestion_failed' }
+
+3. Production build warns:
+   Package pdfjs-dist can't be external
+   for pdf.mjs and pdf.worker.mjs.
+
+Tasks:
+
+A. Inspect the failing test and ensure every Response body is consumed only once. Do not merely remove assertions.
+
+B. Determine whether the real bundled synthetic PDF was successfully extracted. Verify expected extracted text, not just HTTP status.
+
+C. Diagnose why ingestion produces pdf_ingestion_failed in the test environment. Check worker initialization, Node.js module resolution, file paths, and PDF.js assets.
+
+D. Fix pdfjs-dist compatibility with Next.js server-side bundling. Avoid relying on unsupported ESM require() behavior. Preserve reliable worker loading in Vercel's Node.js runtime.
+
+E. Review next.config.ts, src/lib/pdf-ingestion.ts, and the route-specific file tracing includes. Do not add redundant or ineffective tracing configuration.
+
+F. Keep strict PDF size limits, bounded streaming, authentication, CSRF, Redis quotas, and sanitized error diagnostics.
+
+G. Add a regression assertion that reads a real synthetic PDF through POST /api/ingest/pdf and verifies the extracted page text. The test must pass on Windows.
+
+H. Preserve the Groq provider and financial audit engine unchanged.
+
+I. Run typecheck and lint. Run the full tests and build if the environment supports them; otherwise leave those checks to Windows PowerShell.
+
+J. Do not modify .env, commit, push, or deploy.
+
+Report the exact root causes, changes, and whether the build warnings are completely resolved.
+
+---
+
+Make one small copy change in MarginGhost.
+
+Find the investigation report heading/subtitle that currently displays:
+
+"Local live investigation · Human review required before action"
+
+Replace it with:
+
+"Live investigation · Human review required before action"
+
+Requirements:
+- Apply the change to the report shown in the browser and its printable/PDF version.
+- Update any tests that assert the old wording.
+- Do not alter the synthetic demo labels, financial calculations, evidence citations, self-audit, authentication, quotas, or PDF processing.
+- Make no other UI or functionality changes.
+- Run typecheck, tests, lint, and build where supported.
+- Do not modify .env, commit, push, or deploy.
+- Report the files changed.
