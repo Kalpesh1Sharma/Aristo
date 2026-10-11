@@ -1,0 +1,37 @@
+Implement Phase 2 of MarginGhost: a professional, printable, evidence-first investigation report.
+
+Current baseline:
+- Next.js 16.4.0, TypeScript.
+- 38/38 automated tests pass.
+- Live local Groq investigation and deterministic self-audit work.
+- Public production processing APIs are intentionally disabled with 403.
+- The synthetic demo contains supported, needs_review, and rejected scenarios.
+
+Requirements:
+
+1. Inspect the existing investigation response, live self-audit, source evidence models, and UI before modifying anything.
+2. Add a "Generate report" or "Print report" action on the investigation results and synthetic demo.
+3. The report must contain:
+   - Case title and document identifiers
+   - Final disposition
+   - Potential overcharge only when actually established
+   - Unit-price comparison and deterministic calculation
+   - Self-audit checks and their real statuses
+   - Source documents, page numbers, and exact cited excerpts
+   - Contradictory evidence where applicable
+   - Warnings and unresolved items
+   - Human-review requirement
+   - Clear indication of synthetic data for demo reports
+4. Make the report visually professional and print-friendly using CSS @media print. Support the browser's Save as PDF feature.
+5. Never present a needs_review case as a confirmed ₹0 overcharge.
+6. Never invent citations, findings, financial values, or check results.
+7. Preserve separation between public synthetic replay and local live AI investigation.
+8. Do not add a PDF-generation library, backend storage, external service, or paid API call.
+9. Preserve all processing API guards, Groq behavior, evidence verification, and neatlogs tracing.
+10. Include accessible controls and reasonable mobile and print layouts.
+11. Add regression tests covering reports for supported, needs_review, and rejected cases, including honest evidence and financial labels.
+12. Do not modify .env, dependency versions, Git hooks, or unrelated features.
+13. Do not commit, push, or deploy.
+14. Run typecheck and lint. Leave Windows tests and build verification to me.
+
+Prefer the smallest maintainable implementation that creates a genuinely useful judge-facing report. Do not redesign the entire application.
