@@ -1,0 +1,12 @@
+Fix the ESLint issues in src/lib/evaluation.ts without changing any evaluation behavior.
+
+Current errors:
+- Line 3: Unexpected any
+- Line 15: Unexpected any
+- Line 24: '_f' is defined but never used
+
+Use explicit, type-safe definitions instead of `any`, remove the unused parameter safely, and preserve all nine deterministic scenarios, source verification, fail-closed behavior, and evaluation calculations.
+
+Do not modify dependencies, API guards, .env, Git configuration, or unrelated files.
+
+Run typecheck and lint. Do not commit, push, or deploy.

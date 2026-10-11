@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4NJE44KMZNVS7QXZNQGPDFV",
+  "session_id": "01a12a71-14c8-7fd2-9c18-0c7f5ee9ef28",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T13:29:11.133321606Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/app/globals.css",
+    "src/app/home-client.tsx"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-luna",
+  "turn_id": "d0ecf3668296",
+  "checkpoint_transcript_start": 52,
+  "transcript_lines_at_start": 52,
+  "compact_transcript_start": 7,
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T13:29:10.953345314Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 289,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 289,
+    "total_lines_changed": 1046,
+    "agent_percentage": 0,
+    "metric_version": 2
+  }
+}
