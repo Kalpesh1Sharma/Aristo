@@ -1,19 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { extractWithConfiguredProvider, investigate, GROQ_ENDPOINT, GROQ_MODEL } from "../src/lib/investigation";
+import { POST as investigatePost } from "../src/app/api/investigate/route";
 
-function fixture({ billed = 120, amendment = false, conflicting = false } = {}) {
+function fixture({ billed = 120, contractPrice = 100, amendment = false, conflicting = false } = {}) {
   const docs = [
-    { id: "C1", type: "contract", pages: [{ page: 1, text: "Contract C1 Supplier S1 INR valid 2025-01-01 SKU-X price 100" }] },
+    { id: "C1", type: "contract", pages: [{ page: 1, text: `Contract C1 Supplier S1 INR valid 2025-01-01 SKU-X price ${contractPrice}` }] },
     ...(amendment ? [{ id: "A1", type: "amendment", pages: [{ page: 1, text: "Amendment A1 Supplier S1 contract C1 INR effective 2025-06-01 SKU-X price 110" }] }] : []),
-    { id: "P1", type: "purchase_order", pages: [{ page: 1, text: `PO P1 Supplier S1 contract C1 INR 2025-07-01 SKU-X quantity 10 price ${amendment ? 110 : 100}` }] },
+    { id: "P1", type: "purchase_order", pages: [{ page: 1, text: `PO P1 Supplier S1 contract C1 INR 2025-07-01 SKU-X quantity 10 price ${amendment ? 110 : contractPrice}` }] },
     { id: "I1", type: "invoice", pages: [{ page: 1, text: `Invoice I1 Supplier S1 PO P1 INR 2025-07-02 SKU-X quantity 10 price ${billed}` }] }
   ];
   const cite = (value: unknown, d: (typeof docs)[number]) => ({ value, sourceId: d.id, page: 1, excerpt: d.pages[0].text });
-  const contract = { type: "contract", id: cite("C1", docs[0]), supplierId: cite("S1", docs[0]), currency: cite("INR", docs[0]), validFrom: cite("2025-01-01", docs[0]), prices: [{ sku: cite("SKU-X", docs[0]), unitPrice: cite(100, docs[0]) }] };
+  const contract = { type: "contract", id: cite("C1", docs[0]), supplierId: cite("S1", docs[0]), currency: cite("INR", docs[0]), validFrom: cite("2025-01-01", docs[0]), prices: [{ sku: cite("SKU-X", docs[0]), unitPrice: cite(contractPrice, docs[0]) }] };
   const pos = docs.find(d => d.type === "purchase_order")!;
   const inv = docs.find(d => d.type === "invoice")!;
-  const po = { type: "purchase_order", id: cite("P1", pos), supplierId: cite("S1", pos), contractId: cite("C1", pos), currency: cite("INR", pos), orderedAt: cite("2025-07-01", pos), items: [{ sku: cite("SKU-X", pos), quantity: cite(10, pos), unitPrice: cite(amendment ? 110 : 100, pos) }] };
+  const po = { type: "purchase_order", id: cite("P1", pos), supplierId: cite("S1", pos), contractId: cite("C1", pos), currency: cite("INR", pos), orderedAt: cite("2025-07-01", pos), items: [{ sku: cite("SKU-X", pos), quantity: cite(10, pos), unitPrice: cite(amendment ? 110 : contractPrice, pos) }] };
   const invoice = { type: "invoice", id: cite("I1", inv), supplierId: cite("S1", inv), purchaseOrderId: cite("P1", inv), currency: cite("INR", inv), issuedAt: cite("2025-07-02", inv), items: [{ sku: cite("SKU-X", inv), quantity: cite(10, inv), unitPrice: cite(billed, inv) }] };
   const amendments = amendment ? [{ type: "amendment", id: cite("A1", docs[1]), supplierId: cite("S1", docs[1]), contractId: cite("C1", docs[1]), currency: cite("INR", docs[1]), effectiveFrom: cite("2025-06-01", docs[1]), prices: [{ sku: cite("SKU-X", docs[1]), unitPrice: cite(conflicting ? 115 : 110, docs[1]) }] }] : [];
   return { docs, facts: { documents: [contract, ...amendments, po, invoice] } };
@@ -28,6 +29,72 @@ test("genuine overcharge yields deterministic recovery case", async () => {
   const f = fixture(); const r = await withFacts(f);
   assert.equal(r.state, "completed"); assert.equal(r.case?.totalPotentialOvercharge, 200);
   assert.ok(r.evidence.some(x => x.sourceId === "I1" && x.page === 1));
+  assert.equal(r.selfAudit?.[0].disposition, "supported");
+  assert.ok(r.selfAudit?.[0].checks.every(check => check.result === "passed"));
+  assert.ok(r.selfAudit?.[0].supportingEvidence.some(x => x.sourceId === "I1"));
+});
+test("live investigation API returns supported, review, and rejected self-audit records", async () => {
+  const savedEnv = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY, demo: process.env.DEMO_MODE, node: process.env.NODE_ENV, logs: process.env.NEATLOGS_API_KEY };
+  const originalFetch = globalThis.fetch;
+  Object.assign(process.env, { LLM_MODE: "groq_free", LLM_API_URL: GROQ_ENDPOINT, LLM_MODEL: GROQ_MODEL, LLM_API_KEY: "test-key", DEMO_MODE: "false", NODE_ENV: "development" });
+  delete process.env.NEATLOGS_API_KEY;
+  try {
+    const largeOvercharge = fixture({ billed: 525, contractPrice: 480 });
+    const poDoc = largeOvercharge.docs.find(doc => doc.type === "purchase_order")!;
+    const invoiceDoc = largeOvercharge.docs.find(doc => doc.type === "invoice")!;
+    poDoc.pages[0].text = poDoc.pages[0].text.replace("quantity 10", "quantity 400");
+    invoiceDoc.pages[0].text = invoiceDoc.pages[0].text.replace("quantity 10", "quantity 400");
+    const poFact = largeOvercharge.facts.documents.find(document => document.type === "purchase_order") as { type: string; items: { quantity: { value: unknown } }[] } | undefined;
+    const invoiceFact = largeOvercharge.facts.documents.find(document => document.type === "invoice") as { type: string; items: { quantity: { value: unknown }; unitPrice: { value: unknown } }[] } | undefined;
+    if (!poFact || poFact.type !== "purchase_order" || !invoiceFact || invoiceFact.type !== "invoice") throw new Error("Expected purchase order and invoice");
+    poFact.items[0].quantity.value = 400;
+    invoiceFact.items[0].quantity.value = 400;
+    invoiceFact.items[0].unitPrice.value = 525;
+    const refreshExcerpts = (value: unknown): void => {
+      if (Array.isArray(value)) return value.forEach(refreshExcerpts);
+      if (value && typeof value === "object") {
+        const fact = value as Record<string, unknown>;
+        if (typeof fact.sourceId === "string" && typeof fact.page === "number" && "excerpt" in fact) {
+          const doc = largeOvercharge.docs.find(source => source.id === fact.sourceId);
+          const page = doc?.pages.find(sourcePage => sourcePage.page === fact.page);
+          if (page) fact.excerpt = page.text;
+          return;
+        }
+        Object.values(fact).forEach(refreshExcerpts);
+      }
+    };
+    refreshExcerpts(largeOvercharge.facts);
+    for (const scenario of [
+      { fixture: largeOvercharge, expected: "supported" },
+      { fixture: fixture({ amendment: true, conflicting: true }), expected: "needs_review" },
+      { fixture: fixture({ billed: 100 }), expected: "rejected" }
+    ] as const) {
+      let requests = 0;
+      globalThis.fetch = (async () => {
+        requests++;
+        return Response.json({ choices: [{ message: { content: JSON.stringify(scenario.fixture.facts) } }] });
+      }) as typeof fetch;
+      const response = await investigatePost(new Request("http://localhost:3000/api/investigate", { method: "POST", headers: { host: "localhost:3000", "content-type": "application/json" }, body: JSON.stringify({ documents: scenario.fixture.docs }) }));
+      const result = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(requests, 1);
+      assert.equal(result.selfAudit[0].disposition, scenario.expected);
+      assert.ok(Array.isArray(result.selfAudit[0].checks));
+      assert.equal(typeof result.selfAudit[0].explanation, "string");
+      if (scenario.expected === "supported") {
+        assert.equal(result.case.totalPotentialOvercharge, 18000);
+        assert.equal(result.selfAudit[0].disposition, "supported");
+        assert.match(result.selfAudit[0].supportingEvidence.map((ref: { excerpt: string }) => ref.excerpt).join(" "), /price 480/);
+        assert.match(result.selfAudit[0].supportingEvidence.map((ref: { excerpt: string }) => ref.excerpt).join(" "), /price 525/);
+      }
+      if (scenario.expected === "needs_review") assert.equal(result.selfAudit[0].checks.some((check: { result: string }) => check.result === "failed" || check.result === "not_verified"), true);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries({ LLM_MODE: savedEnv.mode, LLM_API_URL: savedEnv.url, LLM_MODEL: savedEnv.model, LLM_API_KEY: savedEnv.key, DEMO_MODE: savedEnv.demo, NODE_ENV: savedEnv.node, NEATLOGS_API_KEY: savedEnv.logs })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
 });
 test("valid newer amendment supersedes old price", async () => {
   const f = fixture({ amendment: true, billed: 110 }); const r = await withFacts(f);
@@ -36,6 +103,24 @@ test("valid newer amendment supersedes old price", async () => {
 test("conflicting amendment and PO pricing require review", async () => {
   const f = fixture({ amendment: true, conflicting: true, billed: 120 }); const r = await withFacts(f);
   assert.equal(r.state, "needs_review");
+  assert.ok(r.selfAudit?.some(a => a.disposition === "needs_review"));
+  assert.ok(r.selfAudit?.[0].contradictoryEvidence.some(e => e.sourceId === "A1"));
+});
+
+test("supplier identity change is not promoted as an overcharge", async () => {
+  const f = fixture(); const facts = structuredClone(f.facts);
+  const invoice = facts.documents.find(d => d.type === "invoice");
+  if (!invoice || invoice.type !== "invoice") throw new Error("Expected invoice");
+  invoice.supplierId.value = "S2";
+  invoice.supplierId.excerpt = "Supplier S1";
+  assert.equal((await withFacts(f, facts)).state, "needs_review");
+});
+
+test("contract effective date mismatch produces review, not a supported claim", async () => {
+  const f = fixture(); const facts = structuredClone(f.facts);
+  const contract = facts.documents[0] as { type: string; validFrom: { value: unknown } };
+  contract.validFrom.value = "2025-08-01";
+  assert.equal((await withFacts(f, facts)).state, "needs_review");
 });
 test("unsupported quotes and invalid model response are rejected", async () => {
   const f = fixture();
@@ -291,4 +376,41 @@ test("complete cited contract, purchase order, and invoice facts validate", asyn
   assert.equal(result.state, "completed");
   assert.equal(result.case?.totalPotentialOvercharge, 0);
   assert.equal(result.evidence.length, 22);
+});
+
+test("PO contractId remains a complete citation to the exact PO reference", async () => {
+  const f = fixture({ billed: 100 });
+  const result = await withFacts(f);
+  const po = f.facts.documents[1] as { type: string; contractId: unknown };
+  if (po.type !== "purchase_order") throw new Error("Expected purchase order");
+  assert.deepEqual(po.contractId, { value: "C1", sourceId: "P1", page: 1, excerpt: f.docs[1].pages[0].text });
+  assert.equal(result.state, "completed");
+  assert.ok(result.evidence.some(e => e.field === "documents[1].contractId" && e.sourceId === "P1" && e.excerpt.includes("contract C1")));
+});
+
+test("missing or malformed PO contract references fail closed with safe structural diagnostics", async () => {
+  const f = fixture({ billed: 100 });
+  const missing = structuredClone(f.facts);
+  const missingPo = missing.documents.find(document => document.type === "purchase_order");
+  if (!missingPo || missingPo.type !== "purchase_order") throw new Error("Expected purchase order");
+  delete (missingPo as { contractId?: unknown }).contractId;
+  const missingResult = await withFacts(f, missing);
+  assert.equal(missingResult.state, "needs_review");
+  assert.deepEqual(missingResult.diagnostic?.structuralFailures, [{ field: "documents[1].contractId", reason: "missing" }]);
+
+  const malformed = structuredClone(f.facts);
+  const malformedPo = malformed.documents.find(document => document.type === "purchase_order");
+  if (!malformedPo || malformedPo.type !== "purchase_order") throw new Error("Expected purchase order");
+  (malformedPo as { contractId: unknown }).contractId = "C1";
+  const malformedResult = await withFacts(f, malformed);
+  assert.equal(malformedResult.state, "needs_review");
+  assert.deepEqual(malformedResult.diagnostic?.structuralFailures, [{ field: "documents[1].contractId", reason: "wrong_type" }]);
+  assert.equal(JSON.stringify(malformedResult.diagnostic).includes("C1"), false);
+
+  const nullReference = structuredClone(f.facts);
+  const nullPo = nullReference.documents.find(document => document.type === "purchase_order");
+  if (!nullPo || nullPo.type !== "purchase_order") throw new Error("Expected purchase order");
+  (nullPo as { contractId: unknown }).contractId = null;
+  const nullResult = await withFacts(f, nullReference);
+  assert.deepEqual(nullResult.diagnostic?.structuralFailures, [{ field: "documents[1].contractId", reason: "null" }]);
 });

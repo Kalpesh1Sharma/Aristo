@@ -14,5 +14,7 @@ export const tracedExtraction = span({ kind: "TOOL", name: "document_extraction"
 export const tracedMatching = span({ kind: "CHAIN", name: "document_matching", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
 export const tracedInvestigation = span({ kind: "CHAIN", name: "amendment_investigation", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
 export const tracedVerification = span({ kind: "CHAIN", name: "evidence_verification", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
+export const tracedChallenge = span({ kind: "CHAIN", name: "challenge_candidate_finding", captureInput: false, captureOutput: false }, async <T>(fn: () => T) => fn());
+export const tracedDecision = span({ kind: "CHAIN", name: "deterministic_finding_decision", captureInput: false, captureOutput: false }, async <T>(fn: () => T) => fn());
 export const tracedRetry = span({ kind: "TOOL", name: "bounded_extraction_retry", captureInput: false, captureOutput: false }, async <T>(fn: () => Promise<T>) => fn());
 export async function flushTracing(enabled: boolean) { if (enabled) await flush(); }

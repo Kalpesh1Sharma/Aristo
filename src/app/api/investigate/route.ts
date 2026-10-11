@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     if (result.diagnostic) devDiagnostic(result.diagnostic.category, {
       ...(result.diagnostic.status ? { status: result.diagnostic.status } : {}),
       ...(result.diagnostic.fields ? { fields: result.diagnostic.fields } : {}),
+      ...(result.diagnostic.structuralFailures ? { structuralFailures: result.diagnostic.structuralFailures } : {}),
       ...(result.diagnostic.providerCode ? { providerCode: result.diagnostic.providerCode } : {}),
       ...(result.diagnostic.providerType ? { providerType: result.diagnostic.providerType } : {}),
       ...(result.diagnostic.param ? { param: result.diagnostic.param } : {}),
