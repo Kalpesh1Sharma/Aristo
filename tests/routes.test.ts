@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import Home from "../src/app/page";
 import InvestigatePage from "../src/app/investigate/page";
 import DemoPage from "../src/app/demo/page";
+import EvaluationPage from "../src/app/evaluation/page";
 import { SelfAuditSection } from "../src/app/home-client";
 
 test("homepage presents product value and links to both workflows", () => {
@@ -12,6 +13,7 @@ test("homepage presents product value and links to both workflows", () => {
   assert.match(html, /Find invoice discrepancies/);
   assert.match(html, /href="\/investigate"/);
   assert.match(html, /href="\/demo"/);
+  assert.match(html, /href="\/evaluation"/);
 });
 
 test("investigation route retains the PDF workspace and shared route navigation", () => {
@@ -35,6 +37,17 @@ test("demo route presents the synthetic scenarios and evidence notice", () => {
   assert.match(html, /Two prices disagree/);
   assert.match(html, /Demonstration data only/);
   assert.match(html, /href="\/investigate"/);
+});
+
+test("evaluation route executes fixed scenarios and labels deterministic scope", async () => {
+  const html = renderToStaticMarkup(await EvaluationPage());
+  assert.match(html, /Reliability under adversarial conditions/);
+  assert.match(html, /DETERMINISTIC REGRESSION/);
+  assert.match(html, /ADVERSARIAL SCENARIOS PASSED/);
+  assert.match(html, /Genuine invoice overcharge/);
+  assert.match(html, /Unsupported source quotation/);
+  assert.match(html, /not an LLM benchmark/);
+  assert.doesNotMatch(html, /href="\/api\//);
 });
 
 test("self-audit presentation labels supported, review, and rejected dispositions with evidence context", () => {
