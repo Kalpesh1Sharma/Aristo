@@ -6,7 +6,8 @@ import Home from "../src/app/page";
 import InvestigatePage from "../src/app/investigate/page";
 import DemoPage from "../src/app/demo/page";
 import EvaluationPage from "../src/app/evaluation/page";
-import { SelfAuditSection } from "../src/app/home-client";
+import { reviewerDecisionAvailable, ReviewerHandoff, SelfAuditSection } from "../src/app/home-client";
+import { readFileSync } from "node:fs";
 
 test("homepage presents product value and links to both workflows", () => {
   const html = renderToStaticMarkup(createElement(Home));
@@ -94,4 +95,47 @@ test("self-audit presentation labels supported, review, and rejected disposition
     assert.match(html, /A-001 · p\.1/);
     assert.match(html, /not an approved payment claim/);
   }
+});
+
+test("reviewer handoff exposes evidence review and report export with disposition-aware status", () => {
+  const finding = { invoiceId: "I-001", sku: "SKU-X", status: "potential_overcharge" as const, expectedUnitPrice: 480, billedUnitPrice: 525, quantity: 400, potentialOvercharge: 18000, reason: "Price difference", evidence: [] };
+  const audit = (disposition: "supported" | "needs_review" | "rejected") => ({ proposedFinding: "Invoice discrepancy", checks: [], supportingEvidence: [], contradictoryEvidence: [], disposition, explanation: "Review evidence." });
+  const result = (disposition: "supported" | "needs_review" | "rejected") => ({ state: "completed" as const, case: { status: "completed" as const, currency: "INR" as const, totalPotentialOvercharge: 18000, findings: [finding], checkedInvoices: 1, warnings: [] }, evidence: [], warnings: [], selfAudit: [audit(disposition)] });
+  const supported = renderToStaticMarkup(createElement(ReviewerHandoff, { result: result("supported") }));
+  assert.match(supported, /Awaiting human review/);
+  assert.match(supported, /href="#evidence-review-target"/);
+  assert.match(supported, /Review evidence/);
+  assert.match(supported, /Export evidence report/);
+  assert.match(supported, /independently verify the finding/);
+  assert.match(supported, /contract, purchase-order, and invoice citations/);
+  assert.match(supported, /Approve finding for further review/);
+  assert.match(supported, /Reject finding/);
+  assert.match(supported, /Reset decision/);
+  assert.match(supported, /Optional reviewer note/);
+  assert.match(supported, /temporary, held only in this page session, and are not saved or transmitted/);
+  assert.match(supported, /does not mean approved payment, confirmed recovery, or an authorized dispute/);
+  const review = renderToStaticMarkup(createElement(ReviewerHandoff, { result: { ...result("needs_review"), state: "needs_review" } }));
+  assert.match(review, /Needs review/);
+  assert.doesNotMatch(review, /Awaiting human review/);
+  assert.doesNotMatch(review, /Approve finding for further review|Reject finding/);
+  const rejected = renderToStaticMarkup(createElement(ReviewerHandoff, { result: result("rejected") }));
+  assert.match(rejected, /Rejected/);
+  assert.doesNotMatch(rejected, /Awaiting human review/);
+  assert.doesNotMatch(rejected, /Approve finding for further review|Reject finding/);
+  const incomplete = { ...result("supported"), case: null };
+  assert.equal(reviewerDecisionAvailable(result("supported")), true);
+  assert.equal(reviewerDecisionAvailable(result("needs_review")), false);
+  assert.equal(reviewerDecisionAvailable(result("rejected")), false);
+  assert.equal(reviewerDecisionAvailable(incomplete), false);
+});
+
+test("reviewer handoff styles use theme-aware contrast, visible focus, and a narrow-screen layout", () => {
+  const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.reviewer-handoff h2 \{[^}]*color: var\(--ink\)/);
+  assert.match(css, /\.reviewer-handoff p \{[^}]*color: var\(--muted\)/);
+  assert.match(css, /\.decision-button[^}]*background: var\(--surface\);[^}]*color: var\(--ink\)/);
+  assert.match(css, /\.reviewer-handoff textarea:focus-visible[^}]*outline: 3px solid var\(--forest\)/);
+  assert.match(css, /\.reviewer-handoff textarea \{[^}]*background: var\(--surface\);[^}]*color: var\(--ink\)/);
+  assert.match(css, /\.reviewer-handoff \{[^}]*grid-template-columns: 1fr/);
+  assert.match(css, /\.decision-actions \{[^}]*flex-direction: column/);
 });
