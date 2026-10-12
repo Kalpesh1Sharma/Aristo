@@ -92,9 +92,11 @@ export async function extractPdfPages(input: Uint8Array): Promise<PdfPageText[]>
       const content = await page.getTextContent();
       const text = content.items
         .filter((item): item is typeof item & { str: string } => "str" in item)
-        .map(item => item.str)
-        .join(" ")
-        .replace(/\s+/g, " ")
+        .map(item => `${item.str}${"hasEOL" in item && item.hasEOL ? "\n" : " "}`)
+        .join("")
+        .replace(/[\t\f\v ]+/g, " ")
+        .replace(/ *\n */g, "\n")
+        .replace(/\n{2,}/g, "\n")
         .trim();
       pages.push({ page: pageNumber, text });
       page.cleanup();

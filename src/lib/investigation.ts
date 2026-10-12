@@ -13,8 +13,8 @@ const jsonNumber = { type: "number" } as const;
 const jsonPage = { type: "integer" } as const;
 const citationJsonSchema = (value: object) => ({
   type: "object",
-  properties: { value, sourceId: jsonString, page: jsonPage, excerpt: jsonString },
-  required: ["value", "sourceId", "page", "excerpt"],
+  properties: { value, sourceId: jsonString, page: jsonPage, spanId: jsonString },
+  required: ["value", "sourceId", "page", "spanId"],
   additionalProperties: false
 });
 const priceJsonSchema = {
@@ -58,29 +58,30 @@ const groqFactsJsonSchema = {
   required: ["documents"],
   additionalProperties: false
 };
-const exampleCitation = (value: string | number, sourceId: string, excerpt: string) => ({ value, sourceId, page: 1, excerpt });
+const exampleCitation = (value: string | number, sourceId: string, spanId: string) => ({ value, sourceId, page: 1, spanId });
 export const GROQ_EXTRACTION_EXAMPLE = {
   documents: [
     {
-      type: "contract", id: exampleCitation("C1", "C1", "Contract C1"), supplierId: exampleCitation("S1", "C1", "Supplier S1"), currency: exampleCitation("INR", "C1", "INR"),
-      contractId: null, purchaseOrderId: null, validFrom: exampleCitation("2025-01-01", "C1", "valid 2025-01-01"), validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: null, issuedAt: null,
-      prices: [{ sku: exampleCitation("SKU-X", "C1", "SKU-X"), unitPrice: exampleCitation(100, "C1", "price INR 100") }], items: null
+      type: "contract", id: exampleCitation("C1", "C1", "L1"), supplierId: exampleCitation("S1", "C1", "L2"), currency: exampleCitation("INR", "C1", "L3"),
+      contractId: null, purchaseOrderId: null, validFrom: exampleCitation("2025-01-01", "C1", "L4"), validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: null, issuedAt: null,
+      prices: [{ sku: exampleCitation("SKU-X", "C1", "L5"), unitPrice: exampleCitation(100, "C1", "L5") }], items: null
     },
     {
-      type: "purchase_order", id: exampleCitation("P1", "P1", "PO P1"), supplierId: exampleCitation("S1", "P1", "Supplier S1"), currency: exampleCitation("INR", "P1", "INR"),
-      contractId: exampleCitation("C1", "P1", "Contract C1"), purchaseOrderId: null, validFrom: null, validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: exampleCitation("2025-07-01", "P1", "ordered 2025-07-01"), issuedAt: null,
-      prices: null, items: [{ sku: exampleCitation("SKU-X", "P1", "SKU-X"), quantity: exampleCitation(10, "P1", "qty 10"), unitPrice: exampleCitation(100, "P1", "price INR 100") }]
+      type: "purchase_order", id: exampleCitation("P1", "P1", "L1"), supplierId: exampleCitation("S1", "P1", "L2"), currency: exampleCitation("INR", "P1", "L3"),
+      contractId: exampleCitation("C1", "P1", "L4"), purchaseOrderId: null, validFrom: null, validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: exampleCitation("2025-07-01", "P1", "L5"), issuedAt: null,
+      prices: null, items: [{ sku: exampleCitation("SKU-X", "P1", "L6"), quantity: exampleCitation(10, "P1", "L6"), unitPrice: exampleCitation(100, "P1", "L6") }]
     },
     {
-      type: "invoice", id: exampleCitation("I1", "I1", "Invoice I1"), supplierId: exampleCitation("S1", "I1", "Supplier S1"), currency: exampleCitation("INR", "I1", "INR"),
-      contractId: null, purchaseOrderId: exampleCitation("P1", "I1", "PO P1"), validFrom: null, validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: null, issuedAt: exampleCitation("2025-07-02", "I1", "issued 2025-07-02"),
-      prices: null, items: [{ sku: exampleCitation("SKU-X", "I1", "SKU-X"), quantity: exampleCitation(10, "I1", "qty 10"), unitPrice: exampleCitation(120, "I1", "price INR 120") }]
+      type: "invoice", id: exampleCitation("I1", "I1", "L1"), supplierId: exampleCitation("S1", "I1", "L2"), currency: exampleCitation("INR", "I1", "L3"),
+      contractId: null, purchaseOrderId: exampleCitation("P1", "I1", "L4"), validFrom: null, validTo: null, effectiveFrom: null, effectiveTo: null, orderedAt: null, issuedAt: exampleCitation("2025-07-02", "I1", "L5"),
+      prices: null, items: [{ sku: exampleCitation("SKU-X", "I1", "L6"), quantity: exampleCitation(10, "I1", "L6"), unitPrice: exampleCitation(120, "I1", "L6") }]
     }
   ]
 } as const;
 const extractionSystemPrompt = `Extract explicitly stated facts only. Return one JSON object matching the supplied JSON Schema, with one document per input document. Every schema property is required. Use null for fields inapplicable to that document type and for an unstated optional validTo/effectiveTo only. Never use null for a required applicable fact.
 For every purchase_order document, contractId is required and must be a complete citation object, never null or omitted. When the PO prints a reference such as "contract C-001", return {"value":"C-001","sourceId":"<that PO's input ID>","page":<printed page number>,"excerpt":"<exact substring containing contract C-001>"}. Do not use the PO's own ID or filename as the contract value, and do not infer or fabricate a citation if the reference is absent or unclear.
-Every factual field must be a citation object exactly shaped as {"value": ..., "sourceId": "...", "page": 1, "excerpt": "..."}. Keep numeric values numeric, page numbers integers, dates YYYY-MM-DD strings, and currency INR. Each excerpt must be an exact substring from that sourceId and page and must support the value. Never transfer a citation between documents, infer facts, or fabricate missing citations. Preserve each input document's ID and type exactly; use only contract, purchase_order, invoice, amendment.
+Every factual field must be a citation object exactly shaped as {"value": ..., "sourceId": "...", "page": 1, "spanId": "L1"}. Keep numeric values numeric, page numbers integers, dates YYYY-MM-DD strings, and currency INR. Each spanId must point to a supplied source line on that sourceId and page that supports the field. Never transfer a citation between documents, infer facts, or fabricate missing citations. Preserve each input document's ID and type exactly; use only contract, purchase_order, invoice, amendment.
+Each page is supplied as ordered, numbered PDF.js source lines. Select the single line containing the fact and return its spanId; do not produce excerpts or combine lines. For item quantity and unitPrice, select the row line containing both that value and the matching SKU. The server derives the evidence quotation from the selected source line and rejects unsupported or ambiguous values. Never select a line based only on a matching number.
 The following synthetic example shows the citation and type-specific nested structure. Every object includes all schema-required keys, with null only for inapplicable fields and unstated optional dates. Its values and citations are illustrative only; never copy them. Use the actual supplied source text and cite each claim from its own source page:
 ${JSON.stringify(GROQ_EXTRACTION_EXAMPLE)}
 For each amendment input, return one amendment object with cited id, supplierId, contractId, currency, effectiveFrom, optional effectiveTo, and prices entries containing cited sku and unitPrice. Include all schema-required keys; set purchaseOrderId, validFrom, validTo, orderedAt, issuedAt, and items to null where inapplicable, and effectiveTo to null when unstated. Do not add fields. Do not output commentary or markdown.`;
@@ -96,7 +97,7 @@ class DiagnosticError extends Error {
   constructor(readonly diagnostic: SafeDiagnostic) { super(diagnostic.category); }
 }
 const safeFields = (paths: PropertyKey[][]) => {
-  const allowed = new Set(["documents", "type", "id", "supplierId", "currency", "validFrom", "validTo", "effectiveFrom", "effectiveTo", "contractId", "purchaseOrderId", "issuedAt", "orderedAt", "prices", "items", "sku", "quantity", "unitPrice", "value", "sourceId", "page", "excerpt", "choices", "message", "content"]);
+  const allowed = new Set(["documents", "type", "id", "supplierId", "currency", "validFrom", "validTo", "effectiveFrom", "effectiveTo", "contractId", "purchaseOrderId", "issuedAt", "orderedAt", "prices", "items", "sku", "quantity", "unitPrice", "value", "sourceId", "page", "excerpt", "spanId", "choices", "message", "content"]);
   return [...new Set(paths.map(path => path.map(part => typeof part === "number" ? `[${part}]` : allowed.has(String(part)) ? String(part) : "<key>").join(".").replace(/\.\[/g, "[")))];
 };
 const parseSafeFieldPath = (path: string): PropertyKey[] => (path.match(/[^.[\]]+|\[(\d+)\]/g) ?? []).map(part => {
@@ -188,10 +189,83 @@ function normalizeModelFacts(candidate: unknown, sources: SourceDocument[]): unk
         throw new DiagnosticError({ category: "unsupported_evidence", fields: [`documents[${index}].type`] });
       }
       const normalized: Record<string, unknown> = { ...document, type };
+      groundSourceLines(normalized, source, `documents[${index}]`);
       for (const [key, field] of Object.entries(normalized)) if (field === null) delete normalized[key];
       return normalized;
     })
   };
+}
+
+function numericValueAppears(value: number, line: string): boolean {
+  const matcher = /(?<![\p{L}\d.-])(\d[\d,]*(?:\.\d+)?)(?![\p{L}\d.-])/gu;
+  return [...line.matchAll(matcher)].some(match => Number(match[1].replaceAll(",", "")) === value);
+}
+
+function stringValueAppears(value: string, line: string): boolean {
+  if (!value) return false;
+  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "u").test(line);
+}
+
+function sourceLineSupports(value: unknown, line: string): boolean {
+  if (typeof value === "string") return stringValueAppears(value, line);
+  return typeof value === "number" && Number.isFinite(value) && numericValueAppears(value, line);
+}
+
+function numericSiblings(parent: Record<string, unknown> | undefined): number[] {
+  if (!parent) return [];
+  return ["quantity", "unitPrice"].flatMap(name => {
+    const fact = parent[name];
+    if (!fact || typeof fact !== "object") return [];
+    const value = (fact as Record<string, unknown>).value;
+    return typeof value === "number" && Number.isFinite(value) ? [value] : [];
+  });
+}
+
+function groundSourceLines(value: unknown, source: SourceDocument, path: string, parent?: Record<string, unknown>, key?: string): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => groundSourceLines(item, source, `${path}[${index}]`, parent, key));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  const record = value as Record<string, unknown>;
+  if ("spanId" in record && "sourceId" in record && "page" in record && "value" in record) {
+    const fieldPath = path;
+    const fail = (category: "missing_evidence" | "unsupported_evidence"): never => { throw new DiagnosticError({ category, fields: safeFields([parseSafeFieldPath(fieldPath)]) }); };
+    if (record.sourceId !== source.id) fail("unsupported_evidence");
+    const pageNumber = record.page;
+    const spanId = record.spanId;
+    const safePageNumber = typeof pageNumber === "number" && Number.isInteger(pageNumber) ? pageNumber : fail("missing_evidence");
+    const safeSpanId = typeof spanId === "string" ? spanId : fail("missing_evidence");
+    const page = source.pages.find(item => item.page === safePageNumber);
+    const lineIndex = /^L([1-9]\d*)$/.exec(safeSpanId);
+    const line = page && lineIndex ? page.text.split("\n")[Number(lineIndex[1]) - 1] : undefined;
+    if (typeof line !== "string" || line.length === 0 || line.length > 1000 || !sourceLineSupports(record.value, line)) fail("missing_evidence");
+    if (key === "quantity" || key === "unitPrice") {
+      const sku = parent?.sku;
+      const skuValue = sku && typeof sku === "object" ? (sku as Record<string, unknown>).value : undefined;
+      if (typeof skuValue !== "string" || !stringValueAppears(skuValue, line as string) || !numericValueAppears(record.value as number, line as string)) fail("missing_evidence");
+    } else if (key === "sku") {
+      if (typeof record.value !== "string" || !numericSiblings(parent).every(number => numericValueAppears(number, line as string))) fail("missing_evidence");
+    }
+    record.excerpt = line as string;
+    delete record.spanId;
+    return;
+  }
+  for (const [childKey, child] of Object.entries(record)) {
+    groundSourceLines(child, source, `${path}.${childKey}`, record, childKey);
+  }
+}
+
+function sourceDocumentsForModel(docs: SourceDocument[]) {
+  return docs.map(document => ({
+    id: document.id,
+    type: document.type,
+    pages: document.pages.map(page => ({
+      page: page.page,
+      sourceLines: page.text.split("\n").map((text, index) => ({ spanId: `L${index + 1}`, text }))
+    }))
+  }));
 }
 
 export async function extractWithConfiguredProvider(docs: SourceDocument[]): Promise<unknown> {
@@ -201,7 +275,7 @@ export async function extractWithConfiguredProvider(docs: SourceDocument[]): Pro
   if (endpoint !== GROQ_ENDPOINT || model !== GROQ_MODEL) throw new DiagnosticError({ category: "invalid_configuration" });
   const apiKey = process.env.LLM_API_KEY;
   if (!apiKey) throw new DiagnosticError({ category: "missing_configuration" });
-  const serialized = JSON.stringify(docs);
+  const serialized = JSON.stringify(sourceDocumentsForModel(docs));
   if (serialized.length > MAX_INPUT_CHARS) throw new DiagnosticError({ category: "input_limit" });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -232,15 +306,25 @@ export async function extractWithConfiguredProvider(docs: SourceDocument[]): Pro
   } finally { clearTimeout(timeout); }
 }
 
-const allFacts = (v: unknown, path = ""): { field: string; sourceId: string; page: number; excerpt: string }[] => {
+const allFacts = (v: unknown, path = ""): { field: string; sourceId: string; page: number; excerpt: string; citation: Record<string, unknown> }[] => {
   if (Array.isArray(v)) return v.flatMap((x, i) => allFacts(x, `${path}[${i}]`));
   if (v && typeof v === "object") {
     const o = v as Record<string, unknown>;
-    if ("sourceId" in o && "page" in o && "excerpt" in o) return [{ field: path, sourceId: String(o.sourceId), page: Number(o.page), excerpt: String(o.excerpt) }];
+    if ("sourceId" in o && "page" in o && "excerpt" in o) return [{ field: path, sourceId: String(o.sourceId), page: Number(o.page), excerpt: String(o.excerpt), citation: o }];
     return Object.entries(o).flatMap(([k, x]) => allFacts(x, path ? `${path}.${k}` : k));
   }
   return [];
 };
+
+function exactSourceSpan(text: string, quote: string): string | null {
+  const normalizedQuote = quote.trim().replace(/\s+/gu, " ");
+  if (!normalizedQuote) return null;
+  const escape = (part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(normalizedQuote.split(" ").map(escape).join("\\s+"), "gu");
+  const matches = [...text.matchAll(pattern)];
+  if (matches.length !== 1 || matches[0].index === undefined) return null;
+  return text.slice(matches[0].index, matches[0].index + matches[0][0].length);
+}
 
 function verify(facts: ExtractedFacts, docs: SourceDocument[]) {
   const sources = new Map(docs.map(d => [d.id, d]));
@@ -248,7 +332,9 @@ function verify(facts: ExtractedFacts, docs: SourceDocument[]) {
     const doc = sources.get(citation.sourceId);
     if (!doc) throw new DiagnosticError({ category: "unsupported_evidence", fields: safeFields([parseSafeFieldPath(citation.field)]) });
     const page = doc.pages.find(p => p.page === citation.page);
-    if (!page || !page.text.includes(citation.excerpt)) throw new DiagnosticError({ category: "missing_evidence", fields: safeFields([parseSafeFieldPath(citation.field)]) });
+    const exactExcerpt = page && exactSourceSpan(page.text, citation.excerpt);
+    if (!exactExcerpt) throw new DiagnosticError({ category: "missing_evidence", fields: safeFields([parseSafeFieldPath(citation.field)]) });
+    citation.citation.excerpt = exactExcerpt;
   }
   for (const d of facts.documents) {
     const id = "id" in d ? d.id.value : "";

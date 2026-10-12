@@ -129,6 +129,22 @@ test("reviewer handoff exposes evidence review and report export with dispositio
   assert.equal(reviewerDecisionAvailable(incomplete), false);
 });
 
+test("supported ₹12,045 investigation shows temporary reviewer decision controls", () => {
+  const result = {
+    state: "completed" as const,
+    case: { status: "completed" as const, currency: "INR" as const, totalPotentialOvercharge: 12045, findings: [{ invoiceId: "INV-SYN-12045", sku: "STEEL-304", status: "potential_overcharge" as const, expectedUnitPrice: 484.85, billedUnitPrice: 525, quantity: 300, potentialOvercharge: 12045, reason: "Invoice price exceeds the evidenced agreed price.", evidence: [] }], checkedInvoices: 1, warnings: [] },
+    evidence: [], warnings: [],
+    selfAudit: [{ proposedFinding: "INV-SYN-12045 · STEEL-304: potential overcharge", checks: ["Source citations", "Supplier and document relationships", "Contract terms", "PO quantity and price", "Invoice calculation"].map(name => ({ name, result: "passed" as const, explanation: "Verified for this synthetic regression case." })), supportingEvidence: [], contradictoryEvidence: [], disposition: "supported" as const, explanation: "All five self-audit checks passed." }]
+  };
+  const html = renderToStaticMarkup(createElement(ReviewerHandoff, { result }));
+  assert.equal(result.case.totalPotentialOvercharge, 12045);
+  assert.equal(result.selfAudit[0].checks.length, 5);
+  assert.equal(reviewerDecisionAvailable(result), true);
+  assert.match(html, /Awaiting human review/);
+  assert.match(html, /Approve finding for further review/);
+  assert.match(html, /Reject finding/);
+});
+
 test("reviewer handoff styles use theme-aware contrast, visible focus, and a narrow-screen layout", () => {
   const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
   assert.match(css, /\.reviewer-handoff h2 \{[^}]*color: var\(--ink\)/);

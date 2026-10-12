@@ -241,9 +241,8 @@ export function ReviewerHandoff({ result }: { result: Result }) {
   const updateNote = (next: string) => setReviewSession({ result, decision, note: next });
   const resetDecision = () => setReviewSession({ result, decision: null, note: "" });
   const dispositions = (result.selfAudit ?? []).map(audit => audit.disposition);
-  const hasSupportedFinding = result.case?.findings.some(finding => finding.status === "potential_overcharge" && finding.potentialOvercharge !== undefined) ?? false;
-  const status = result.state === "needs_review" || !result.case || dispositions.includes("needs_review") ? "Needs review" : hasSupportedFinding && dispositions.includes("supported") ? "Awaiting human review" : dispositions.includes("rejected") ? "Rejected" : "No discrepancy identified";
   const canDecide = reviewerDecisionAvailable(result);
+  const status = result.state === "needs_review" || !result.case || dispositions.includes("needs_review") ? "Needs review" : canDecide ? "Awaiting human review" : dispositions.includes("rejected") ? "Rejected" : "No discrepancy identified";
   return <section className="card reviewer-handoff" aria-labelledby="reviewer-handoff-heading">
     <div className="handoff-copy"><div className="step">REVIEWER HANDOFF</div><h2 id="reviewer-handoff-heading">Human review before finance action</h2><p className="handoff-status">{status}</p><p>An authorized reviewer must independently verify the finding against the source documents before any finance action. This status records no approval or reviewer decision.</p><p>The generated report contains the evidence package: contract, purchase-order, and invoice citations; price and quantity calculation; self-audit outcome; and unresolved issues where applicable.</p></div>
     <div className="handoff-actions"><a className="secondary-button" href="#evidence-review-target">Review evidence</a><button className="secondary-button" type="button" onClick={() => window.print()}>Export evidence report</button></div>

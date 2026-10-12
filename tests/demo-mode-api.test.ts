@@ -24,7 +24,7 @@ test("the three synthetic scenarios match fixture evidence and deterministic out
   const [contract, po, invoice, amendment, revisedPo] = await Promise.all([
     fixtureText("contract"), fixtureText("purchase-order"), fixtureText("invoice"), fixtureText("amendment"), fixtureText("purchase-order-amended")
   ]);
-  assert.match(contract, /valid 2026-01-01 SKU-X price 480/);
+  assert.match(contract, /valid 2026-01-01\s+SKU-X price 480/);
   assert.match(po, /quantity 400 price 480/);
   assert.match(invoice, /quantity 400 price 525/);
   assert.match(amendment, /effective 2026-08-01 SKU-X price 525/);

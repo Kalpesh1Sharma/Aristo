@@ -246,6 +246,9 @@ test("Groq request uses compatible completion token and strict cited-facts schem
     assert.equal(request.response_format.json_schema.name, "margin_ghost_facts");
     assert.equal(request.response_format.json_schema.strict, true);
     assert.equal(request.response_format.json_schema.schema.properties.documents.items.type, "object");
+    const sourcePayload = JSON.parse(request.messages[1].content) as { pages: { sourceLines: { spanId: string; text: string }[] }[] }[];
+    assert.equal(Array.isArray(sourcePayload[0]?.pages[0]?.sourceLines), true, "Groq receives page-delimited source lines");
+    assert.equal(sourcePayload[0]?.pages[0]?.sourceLines[0]?.spanId, "L1", "source line IDs are stable within each page");
     const exampleJson = JSON.stringify(GROQ_EXTRACTION_EXAMPLE);
     assert.ok(request.messages[0].content.includes(exampleJson));
     const assertExampleMatchesSchema = (value: unknown, schema: unknown): void => {
@@ -355,6 +358,138 @@ test("evidence mismatch returns a sanitized diagnostic field path", async () => 
   assert.deepEqual(result.diagnostic?.fields, ["documents[0].prices[0].unitPrice"]);
 });
 
+test("PO quantity value 73 with a nonmatching excerpt fails closed at exact citation verification", async () => {
+  const f = fixture();
+  const poDoc = f.docs.find(document => document.type === "purchase_order");
+  const poFacts = f.facts.documents.find(document => document.type === "purchase_order");
+  if (!poDoc || !poFacts || poFacts.type !== "purchase_order") throw new Error("Expected purchase-order fixture");
+  poDoc.pages[0].text = poDoc.pages[0].text.replace("quantity 10", "quantity 73");
+  const facts = structuredClone(f.facts);
+  const po = facts.documents.find(document => document.type === "purchase_order");
+  if (!po || po.type !== "purchase_order") throw new Error("Expected purchase-order extraction facts");
+  const refreshPoCitations = (value: unknown): void => {
+    if (Array.isArray(value)) { value.forEach(refreshPoCitations); return; }
+    if (!value || typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    if (record.sourceId === poDoc.id && typeof record.excerpt === "string") record.excerpt = poDoc.pages[0].text;
+    else Object.values(record).forEach(refreshPoCitations);
+  };
+  refreshPoCitations(po);
+  const poFields = po as unknown as { items: Array<{ quantity: unknown }> };
+  const quantityFact = poFields.items[0].quantity as Record<string, unknown>;
+  quantityFact.value = 73;
+  quantityFact.excerpt = "qty 73";
+
+  const result = await withFacts({ ...f, facts }, facts);
+  assert.equal(result.state, "needs_review");
+  assert.equal(result.case, null);
+  assert.equal(result.diagnostic?.category, "missing_evidence");
+  assert.deepEqual(result.diagnostic?.fields, ["documents[1].items[0].quantity"]);
+  assert.equal(result.selfAudit?.[0].disposition, "needs_review");
+});
+
+test("C-204/P-306/I-418 text grounds whitespace variants and supports exactly ₹12,045", async () => {
+  const makeCase = () => {
+    const f = fixture({ billed: 649.85, contractPrice: 484.85 });
+    const ids: Record<string, string> = { C1: "C-204", P1: "P-306", I1: "I-418" };
+    const sku = "BRG-6205";
+    for (const doc of f.docs) {
+      const oldId = doc.id;
+      doc.id = ids[oldId];
+      doc.pages[0].text = doc.pages[0].text
+        .replaceAll(oldId, doc.id)
+        .replaceAll("SKU-X", sku)
+        .replace("quantity 10", "quantity 73");
+    }
+    const rewriteCitations = (value: unknown): void => {
+      if (Array.isArray(value)) { value.forEach(rewriteCitations); return; }
+      if (!value || typeof value !== "object") return;
+      const record = value as Record<string, unknown>;
+      if ("sourceId" in record && "page" in record && "excerpt" in record && "value" in record) {
+        const oldSourceId = String(record.sourceId);
+        const sourceId = ids[oldSourceId] ?? oldSourceId;
+        record.sourceId = sourceId;
+        if (typeof record.value === "string") record.value = ids[record.value] ?? (record.value === "SKU-X" ? sku : record.value);
+        record.excerpt = f.docs.find(doc => doc.id === sourceId)?.pages[0].text ?? record.excerpt;
+        return;
+      }
+      Object.values(record).forEach(rewriteCitations);
+    };
+    rewriteCitations(f.facts);
+    for (const doc of f.facts.documents) {
+      if (doc.type === "purchase_order" || doc.type === "invoice") {
+        const lineItems = (doc as unknown as { items: Array<{ quantity: { value: unknown; excerpt: string } }> }).items;
+        lineItems[0].quantity.value = 73;
+      }
+    }
+    const po = f.facts.documents.find(doc => doc.type === "purchase_order");
+    const contract = f.facts.documents.find(doc => doc.type === "contract");
+    if (!po || po.type !== "purchase_order" || !contract || contract.type !== "contract") throw new Error("Expected synthetic contract and PO facts");
+    (po as unknown as { items: Array<{ quantity: { excerpt: string } }> }).items[0].quantity.excerpt = "quantity\n73";
+    (contract as unknown as { prices: Array<{ unitPrice: { excerpt: string } }> }).prices[0].unitPrice.excerpt = "price\n484.85";
+    return f;
+  };
+
+  const valid = makeCase();
+  const addSpan = (citation: unknown) => {
+    const record = citation as Record<string, unknown>;
+    record.spanId = "L1";
+    record.excerpt = "Model supplied excerpt intentionally differs";
+  };
+  const validPo = valid.facts.documents.find(doc => doc.type === "purchase_order");
+  const validContract = valid.facts.documents.find(doc => doc.type === "contract");
+  const validInvoice = valid.facts.documents.find(doc => doc.type === "invoice");
+  if (!validPo || validPo.type !== "purchase_order" || !validContract || validContract.type !== "contract" || !validInvoice || validInvoice.type !== "invoice") throw new Error("Expected all three synthetic documents");
+  addSpan((validPo as unknown as { items: Array<{ quantity: unknown }> }).items[0].quantity);
+  addSpan((validContract as unknown as { prices: Array<{ unitPrice: unknown }> }).prices[0].unitPrice);
+  addSpan((validInvoice as unknown as { items: Array<{ sku: unknown }> }).items[0].sku);
+  const result = await withFacts(valid);
+  assert.equal(result.state, "completed");
+  assert.equal(result.case?.totalPotentialOvercharge, 12045);
+  assert.equal(result.selfAudit?.[0].disposition, "supported");
+  assert.ok(result.evidence.some(ref => ref.field === "documents[1].items[0].quantity" && ref.excerpt.includes("quantity 73")));
+  assert.ok(result.evidence.some(ref => ref.field === "documents[0].prices[0].unitPrice" && ref.excerpt.includes("price 484.85")));
+  assert.ok(result.evidence.some(ref => ref.field === "documents[2].items[0].sku" && ref.excerpt.includes("BRG-6205")));
+
+  for (const field of ["quantity", "unitPrice", "sku"] as const) {
+    const bad = makeCase();
+    const facts = structuredClone(bad.facts);
+    const documentType = field === "unitPrice" ? "contract" : field === "quantity" ? "purchase_order" : "invoice";
+    const document = facts.documents.find(doc => doc.type === documentType);
+    if (!document) throw new Error(`Expected ${documentType} facts`);
+    const pageDoc = bad.docs.find(doc => doc.type === documentType);
+    if (!pageDoc) throw new Error(`Expected ${documentType} source page`);
+    pageDoc.pages[0].text += "\nUnrelated row without the target SKU";
+    const target = documentType === "contract"
+      ? (document as unknown as { prices: Array<{ sku: { value: string }; unitPrice: Record<string, unknown> }> }).prices[0]
+      : (document as unknown as { items: Array<{ sku: { value: string }; quantity: Record<string, unknown>; unitPrice: Record<string, unknown> }> }).items[0];
+    const citation = field === "unitPrice" ? (target as unknown as { unitPrice: Record<string, unknown> }).unitPrice : field === "quantity" ? (target as unknown as { quantity: Record<string, unknown> }).quantity : (target as unknown as { sku: Record<string, unknown> }).sku;
+    citation.spanId = "L2";
+    const rejected = await withFacts(bad, facts);
+    assert.equal(rejected.state, "needs_review");
+    assert.equal(rejected.diagnostic?.category, "missing_evidence");
+    assert.ok(rejected.diagnostic?.fields?.some(path => path.endsWith(field)));
+  }
+
+  for (const [field, excerpt] of [["documents[1].items[0].quantity", "qty 73"], ["documents[0].prices[0].unitPrice", "price INR 484.85"]]) {
+    const bad = makeCase();
+    const facts = structuredClone(bad.facts);
+    if (field.includes("quantity")) {
+      const po = facts.documents.find(doc => doc.type === "purchase_order");
+      if (!po || po.type !== "purchase_order") throw new Error("Expected synthetic PO facts");
+      (po as unknown as { items: Array<{ quantity: { excerpt: string } }> }).items[0].quantity.excerpt = excerpt;
+    } else {
+      const contract = facts.documents.find(doc => doc.type === "contract");
+      if (!contract || contract.type !== "contract") throw new Error("Expected synthetic contract facts");
+      (contract as unknown as { prices: Array<{ unitPrice: { excerpt: string } }> }).prices[0].unitPrice.excerpt = excerpt;
+    }
+    const rejected = await withFacts(bad, facts);
+    assert.equal(rejected.state, "needs_review");
+    assert.equal(rejected.diagnostic?.category, "missing_evidence");
+    assert.deepEqual(rejected.diagnostic?.fields, [field]);
+  }
+});
+
 test("Groq document type aliases reconcile only to supplied source types", async () => {
   const saved = { mode: process.env.LLM_MODE, url: process.env.LLM_API_URL, model: process.env.LLM_MODEL, key: process.env.LLM_API_KEY };
   const originalFetch = globalThis.fetch;
@@ -395,6 +530,39 @@ test("incomplete citation objects fail schema validation without filling facts",
   assert.equal(result.state, "needs_review");
   assert.equal(result.diagnostic?.category, "schema_validation");
   assert.ok(result.diagnostic?.fields?.includes("documents[0].supplierId.excerpt"));
+});
+
+test("synthetic invoice missing its printed PO reference and issue date stays unresolved", async () => {
+  const f = fixture({ billed: 525, contractPrice: 480 });
+  const invoiceDoc = f.docs.find(document => document.type === "invoice");
+  const rawInvoice = f.facts.documents.find(document => document.type === "invoice");
+  if (!invoiceDoc || !rawInvoice || rawInvoice.type !== "invoice") throw new Error("Expected the synthetic invoice fixture");
+  const extractedText = "MarginGhost Synthetic Invoice Invoice: INV-2026-001 Supplier: Apex Steel Supplies Product: STEEL-304 Quantity: 400 Unit Price: INR 525";
+  invoiceDoc.id = "INV-2026-001";
+  invoiceDoc.pages[0].text = extractedText;
+  const cite = (value: unknown, excerpt: string) => ({ value, sourceId: invoiceDoc.id, page: 1, excerpt });
+  const facts = structuredClone(f.facts);
+  const invoice = facts.documents.find(document => document.type === "invoice");
+  if (!invoice || invoice.type !== "invoice") throw new Error("Expected invoice extraction facts");
+  const invoiceFields = invoice as unknown as { id: unknown; supplierId: unknown; currency: unknown; items: Array<Record<string, unknown>>; [key: string]: unknown };
+  invoiceFields.id = cite("INV-2026-001", "Invoice: INV-2026-001");
+  invoiceFields.supplierId = cite("Apex Steel Supplies", "Supplier: Apex Steel Supplies");
+  invoiceFields.currency = cite("INR", "Unit Price: INR 525");
+  invoiceFields.items[0].sku = cite("STEEL-304", "Product: STEEL-304");
+  invoiceFields.items[0].quantity = cite(400, "Quantity: 400");
+  invoiceFields.items[0].unitPrice = cite(525, "Unit Price: INR 525");
+  const rawFacts = invoiceFields;
+  rawFacts.purchaseOrderId = null;
+  rawFacts.issuedAt = null;
+
+  const result = await withFacts({ ...f, facts }, facts);
+  assert.equal(result.state, "needs_review");
+  assert.equal(result.case, null);
+  assert.equal(result.diagnostic?.category, "schema_validation");
+  assert.ok(result.diagnostic?.fields?.includes("documents[2].purchaseOrderId"));
+  assert.ok(result.diagnostic?.fields?.includes("documents[2].issuedAt"));
+  assert.equal(result.selfAudit?.[0].disposition, "needs_review");
+  assert.equal(result.selfAudit?.[0].checks.some(check => check.result === "passed" && check.name === "Invoice price comparison and arithmetic"), false);
 });
 
 test("malformed field structures fail schema validation", async () => {
