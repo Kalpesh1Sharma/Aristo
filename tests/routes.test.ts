@@ -6,7 +6,7 @@ import Home from "../src/app/page";
 import InvestigatePage from "../src/app/investigate/page";
 import DemoPage from "../src/app/demo/page";
 import EvaluationPage from "../src/app/evaluation/page";
-import { reviewerDecisionAvailable, ReviewerHandoff, SelfAuditSection } from "../src/app/home-client";
+import { ReportSection, reviewerDecisionAvailable, ReviewerHandoff, SelfAuditSection } from "../src/app/home-client";
 import { readFileSync } from "node:fs";
 
 test("homepage presents product value and links to both workflows", () => {
@@ -138,4 +138,46 @@ test("reviewer handoff styles use theme-aware contrast, visible focus, and a nar
   assert.match(css, /\.reviewer-handoff textarea \{[^}]*background: var\(--surface\);[^}]*color: var\(--ink\)/);
   assert.match(css, /\.reviewer-handoff \{[^}]*grid-template-columns: 1fr/);
   assert.match(css, /\.decision-actions \{[^}]*flex-direction: column/);
+});
+
+test("investigation report keeps evidence and assigns readable disposition states", () => {
+  const fixture = (disposition: "supported" | "needs_review" | "rejected"): Parameters<typeof ReportSection>[0]["result"] => {
+    const review = disposition === "needs_review";
+    const supported = disposition === "supported";
+    const checks = Array.from({ length: 5 }, (_, index) => ({ name: `Self-audit check ${index + 1}`, result: review && index === 4 ? "not_verified" as const : "passed" as const, explanation: "Evidence check explanation." }));
+    return {
+      state: review ? "needs_review" : "completed",
+      case: { status: review ? "needs_review" : "completed", currency: "INR", totalPotentialOvercharge: supported ? 18000 : 0, findings: supported ? [{ invoiceId: "I-001", sku: "SKU-X", status: "potential_overcharge", expectedUnitPrice: 480, billedUnitPrice: 525, quantity: 400, potentialOvercharge: 18000, reason: "Price difference", evidence: [] }] : [], checkedInvoices: 1, warnings: review ? ["Price could not be verified"] : [] },
+      evidence: [{ field: "unitPrice", sourceId: "C-001", page: 1, excerpt: "Contract price INR 480" }],
+      warnings: review ? ["Price could not be verified"] : [],
+      selfAudit: [{ proposedFinding: "Invoice finding", checks, supportingEvidence: [{ field: "unitPrice", sourceId: "C-001", page: 1, excerpt: "Contract price INR 480" }], contradictoryEvidence: [], disposition, explanation: "A reviewer must examine the evidence." }]
+    };
+  };
+  for (const disposition of ["supported", "needs_review", "rejected"] as const) {
+    const html = renderToStaticMarkup(createElement(ReportSection, { result: fixture(disposition) }));
+    assert.match(html, new RegExp(`report-status-${disposition}`));
+    assert.match(html, /Self-audit check 5/);
+    assert.match(html, /Contract price INR 480/);
+    assert.match(html, /A qualified person must review source documents/);
+    if (disposition === "supported") assert.match(html, /Calculation: \(₹525 − ₹480\) × 400 = ₹18,000/);
+  }
+});
+
+test("report screen colors follow theme tokens and print forces white paper with dark nested text", () => {
+  const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /--report-supported: #b5f0bd/);
+  assert.match(css, /--report-review: #f1c879/);
+  assert.match(css, /--report-rejected: #f0a097/);
+  assert.match(css, /--report-supported:#184F3B/);
+  assert.match(css, /--report-review:#795317/);
+  assert.match(css, /\.report-comparison, \.report-evidence blockquote[^}]*background:var\(--surface-muted\)[^}]*color:var\(--ink\)/);
+  assert.match(css, /\.report-action \.secondary-button:hover:not\(:disabled\)/);
+  assert.match(css, /\.report-action \.secondary-button:disabled/);
+  assert.match(css, /\.report-action \.secondary-button:focus-visible/);
+  assert.match(css, /\.report-action \.secondary-button\[aria-pressed="true"\]/);
+  assert.match(css, /\.investigation-report \{ max-width:100%; min-width:0; overflow-wrap:anywhere/);
+  assert.match(css, /@media print \{[^]*\.investigation-report, \.investigation-report \* \{ background:#fff !important; background-color:#fff !important; color:#111 !important/);
+  assert.match(css, /\.investigation-report \.report-synthetic[^}]*color:#111 !important/);
+  assert.match(css, /\.investigation-report \.report-amount[^}]*color:#111 !important/);
+  assert.match(css, /\.report-audit, \.report-comparison, \.report-evidence blockquote[^}]*break-inside:avoid/);
 });
